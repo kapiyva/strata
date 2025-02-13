@@ -2,8 +2,8 @@ pub mod state;
 
 use std::collections::HashMap;
 
-use color_eyre::eyre::{eyre, Result};
-use eyre::bail;
+use color_eyre::eyre::Result;
+use eyre::{bail, OptionExt};
 use state::{
     AddTableState, DisplayState, DisplayTableState, EditCellState, SelectTableState, SelectedCell,
 };
@@ -29,8 +29,13 @@ impl App {
         self.table_map.keys().collect()
     }
 
-    pub fn get_table_data(&self, table_name: &str) -> Result<Option<&TableData>> {
-        Ok(self.table_map.get(&TableName::from(table_name)?))
+    pub fn get_table_data(&self) -> Result<&TableData> {
+        let table_name = &self
+            .get_selected_cell()
+            .ok_or_eyre("No table selected")?
+            .table_name;
+
+        self.table_map.get(table_name).ok_or_eyre("Table not found")
     }
 
     pub fn get_selected_cell(&self) -> Option<&SelectedCell> {
@@ -153,9 +158,10 @@ impl App {
                 let table_data =
                     self.table_map
                         .get(&selected_cell.table_name)
-                        .ok_or_else(|| {
-                            eyre!("Table not found: {}", selected_cell.table_name.as_str())
-                        })?;
+                        .ok_or_eyre(format!(
+                            "Table not found: {}",
+                            selected_cell.table_name.as_str()
+                        ))?;
                 let new_row = (selected_cell.row as isize + row).max(0) as usize;
                 let new_col = (selected_cell.col as isize + col).max(0) as usize;
                 if new_row < table_data.rows.len() && new_col < table_data.headers.len() {
@@ -179,9 +185,10 @@ impl App {
                 let table_data =
                     self.table_map
                         .get(&selected_cell.table_name)
-                        .ok_or_else(|| {
-                            eyre!("Table not found: {}", selected_cell.table_name.as_str())
-                        })?;
+                        .ok_or_eyre(format!(
+                            "Table not found: {}",
+                            selected_cell.table_name.as_str()
+                        ))?;
                 if row < table_data.rows.len() && col < table_data.headers.len() {
                     self.display_state = DisplayState::DisplayTable(DisplayTableState {
                         selected_cell: SelectedCell {
@@ -197,15 +204,42 @@ impl App {
         }
     }
 
+    pub fn get_cell_value(&self) -> Result<String> {
+        match &self.display_state {
+            DisplayState::DisplayTable(DisplayTableState { selected_cell }) => {
+                let table_data =
+                    self.table_map
+                        .get(&selected_cell.table_name)
+                        .ok_or_eyre(format!(
+                            "Table not found: {}",
+                            selected_cell.table_name.as_str()
+                        ))?;
+                Ok(table_data.rows[selected_cell.row][selected_cell.col].clone())
+            }
+            DisplayState::EditCell(EditCellState { selected_cell }) => {
+                let table_data =
+                    self.table_map
+                        .get(&selected_cell.table_name)
+                        .ok_or_eyre(format!(
+                            "Table not found: {}",
+                            selected_cell.table_name.as_str()
+                        ))?;
+                Ok(table_data.rows[selected_cell.row][selected_cell.col].clone())
+            }
+            _ => bail!("Cannot get cell value in current state"),
+        }
+    }
+
     pub fn update_cell_value(&mut self, value: &str) -> Result<()> {
         match &self.display_state {
             DisplayState::EditCell(EditCellState { selected_cell }) => {
                 let table_data = self
                     .table_map
                     .get_mut(&selected_cell.table_name)
-                    .ok_or_else(|| {
-                        eyre!("Table not found: {}", selected_cell.table_name.as_str())
-                    })?;
+                    .ok_or_eyre(format!(
+                        "Table not found: {}",
+                        selected_cell.table_name.as_str()
+                    ))?;
                 table_data.rows[selected_cell.row][selected_cell.col] = value.to_string();
                 Ok(())
             }
