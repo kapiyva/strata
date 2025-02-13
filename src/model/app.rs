@@ -1,10 +1,12 @@
-mod state;
+pub mod state;
 
 use std::collections::HashMap;
 
 use color_eyre::eyre::{eyre, Result};
 use eyre::bail;
-use state::{AddTableState, DisplayState, DisplayTableState, EditCellState, SelectTableState, SelectedCell};
+use state::{
+    AddTableState, DisplayState, DisplayTableState, EditCellState, SelectTableState, SelectedCell,
+};
 
 use super::table::{TableData, TableName};
 
@@ -211,5 +213,3 @@ impl App {
         }
     }
 }
-
-

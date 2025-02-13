@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::model::TableName;
+use crate::model::table::TableName;
 
 pub enum Message {
     NewTable(TableName),
