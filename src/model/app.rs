@@ -4,9 +4,7 @@ use std::collections::HashMap;
 
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
-use state::{
-    AddTableState, DisplayState, DisplayTableState, EditCellState, SelectTableState, SelectedCell,
-};
+use state::*;
 
 use crate::error::StrataError;
 
@@ -32,24 +30,18 @@ impl App {
         self.table_map.keys().collect()
     }
 
-    pub fn get_selected_table_name(&self) -> Option<String> {
+    pub fn get_selected_table_name(&self) -> Option<&TableName> {
         match &self.display_state {
             DisplayState::AddTable(AddTableState { selected_cell })
             | DisplayState::SelectTable(SelectTableState { selected_cell }) => {
-                selected_cell.as_ref().map(|sc| sc.table_name.to_string())
+                selected_cell.as_ref().map(|sc| &sc.table_name)
             }
 
             DisplayState::DisplayTable(DisplayTableState { selected_cell })
             | DisplayState::EditCell(EditCellState { selected_cell }) => {
-                Some(selected_cell.table_name.to_string())
+                Some(&selected_cell.table_name)
             }
         }
-    }
-
-    pub fn get_table_data(&self) -> Option<&TableData> {
-        let table_name = &self.get_selected_cell()?.table_name;
-
-        self.table_map.get(table_name)
     }
 
     pub fn get_selected_cell(&self) -> Option<&SelectedCell> {
@@ -62,6 +54,16 @@ impl App {
             DisplayState::DisplayTable(DisplayTableState { selected_cell })
             | DisplayState::EditCell(EditCellState { selected_cell }) => Some(selected_cell),
         }
+    }
+
+    pub fn get_table_data(&self) -> Result<&TableData> {
+        let table_name = self
+            .get_selected_table_name()
+            .ok_or_eyre(StrataError::NoTableSelected)?;
+
+        self.table_map
+            .get(table_name)
+            .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
     }
 
     /// Call from SelectTable state
@@ -140,7 +142,7 @@ impl App {
 
         let table_name = TableName::from(table_name_str)?;
         if self.table_map.contains_key(&table_name) {
-            bail!(StrataError::TableDuplicate(table_name_str.to_string()));
+            bail!(StrataError::TableNameDuplicate(table_name_str.to_string()));
         }
 
         self.table_map.insert(table_name.clone(), TableData::new()?);
@@ -206,7 +208,7 @@ impl App {
             selected_cell = sc.clone();
         }
 
-        let table_data = self.get_table_data_mut()?;
+        let table_data = self.get_table_data()?;
         let new_row = (selected_cell.row as isize + row).max(0) as usize;
         let new_col = (selected_cell.col as isize + col).max(0) as usize;
         if new_row < table_data.rows.len() && new_col < table_data.headers.len() {
@@ -285,34 +287,26 @@ impl App {
             });
         };
 
-        let table_data = self
-            .get_table_data()
-            .ok_or_eyre(StrataError::TableNotFound(
-                self.get_selected_table_name().unwrap_or("".to_string()),
-            ))?;
-        if row < table_data.rows.len() && col < table_data.headers.len() {
-            self.display_state = DisplayState::DisplayTable(DisplayTableState {
-                selected_cell: SelectedCell {
-                    table_name: selected_cell.table_name.clone(),
-                    row,
-                    col,
-                },
-            });
-        };
+        let table_data = self.get_table_data()?;
+        table_data.is_valid_row_index(row)?;
+        table_data.is_valid_col_index(col)?;
+        self.display_state = DisplayState::DisplayTable(DisplayTableState {
+            selected_cell: SelectedCell {
+                table_name: selected_cell.table_name.clone(),
+                row,
+                col,
+            },
+        });
 
         Ok(())
     }
 
-    pub fn get_cell_value(&self) -> Result<String> {
+    pub fn get_cell_value(&self) -> Result<&str> {
         match &self.display_state {
             DisplayState::DisplayTable(DisplayTableState { selected_cell })
             | DisplayState::EditCell(EditCellState { selected_cell }) => self
-                .get_table_data()
-                .ok_or_eyre(StrataError::TableNotFound(
-                    self.get_selected_table_name().unwrap_or("".to_string()),
-                ))?
-                .get_cell(selected_cell.row, selected_cell.col)
-                .map(|s| s.to_string()),
+                .get_table_data()?
+                .get_cell_value(selected_cell.row, selected_cell.col),
             _ => bail!(StrataError::InvalidOperationCall {
                 operation: "get cell value".to_string(),
                 state: self.display_state.to_string()
@@ -344,8 +338,8 @@ impl App {
             .ok_or_eyre(StrataError::NoTableSelected)?
             .clone();
         self.table_map
-            .get_mut(&TableName::from(&table_name)?)
-            .ok_or_eyre(StrataError::TableNotFound(table_name))
+            .get_mut(&table_name)
+            .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
     }
 }
 
@@ -408,11 +402,17 @@ mod tests {
 
         app.set_state_select_table().unwrap();
         app.select_table("table1").unwrap();
-        assert_eq!(app.get_selected_table_name(), Some("table1".to_string()));
+        assert_eq!(
+            app.get_selected_table_name().map(|tn| tn.as_str()),
+            Some("table1")
+        );
 
         app.set_state_select_table().unwrap();
         app.select_table("table2").unwrap();
-        assert_eq!(app.get_selected_table_name(), Some("table2".to_string()));
+        assert_eq!(
+            app.get_selected_table_name().map(|tn| tn.as_str()),
+            Some("table2")
+        );
     }
 
     #[test]

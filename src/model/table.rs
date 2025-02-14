@@ -49,7 +49,7 @@ impl TableData {
         &self.headers
     }
 
-    pub fn get_cell(&self, row: usize, col: usize) -> Result<&str> {
+    pub fn get_cell_value(&self, row: usize, col: usize) -> Result<&str> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;
 
@@ -101,7 +101,7 @@ impl TableData {
         Ok(())
     }
 
-    fn is_valid_row_index(&self, row: usize) -> Result<()> {
+    pub fn is_valid_row_index(&self, row: usize) -> Result<()> {
         if row >= self.rows.len() {
             bail!(StrataError::InvalidRowIndex {
                 max: self.rows.len() - 1,
@@ -111,7 +111,7 @@ impl TableData {
         Ok(())
     }
 
-    fn is_valid_col_index(&self, col: usize) -> Result<()> {
+    pub fn is_valid_col_index(&self, col: usize) -> Result<()> {
         if col >= self.headers.len() {
             bail!(StrataError::InvalidColumnIndex {
                 max: self.headers.len() - 1,
@@ -229,12 +229,12 @@ mod tests {
     fn test_get_cell() {
         let table_data = setup_table_data();
 
-        assert_eq!(table_data.get_cell(0, 0).unwrap(), "cell00");
-        assert_eq!(table_data.get_cell(1, 1).unwrap(), "cell11");
+        assert_eq!(table_data.get_cell_value(0, 0).unwrap(), "cell00");
+        assert_eq!(table_data.get_cell_value(1, 1).unwrap(), "cell11");
 
         // Invalid row index
         assert_eq!(
-            table_data.get_cell(2, 0).unwrap_err().to_string(),
+            table_data.get_cell_value(2, 0).unwrap_err().to_string(),
             StrataError::InvalidRowIndex {
                 max: 1,
                 requested: 2
@@ -244,7 +244,7 @@ mod tests {
 
         // Invalid column index
         assert_eq!(
-            table_data.get_cell(0, 2).unwrap_err().to_string(),
+            table_data.get_cell_value(0, 2).unwrap_err().to_string(),
             StrataError::InvalidColumnIndex {
                 max: 1,
                 requested: 2
