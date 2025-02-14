@@ -237,7 +237,7 @@ impl App {
 
     /// Call from DisplayTable display state
     /// Collapse the row
-    pub fn collapse_row(&mut self) -> Result<()> {
+    pub fn collapse_row(&mut self, row: usize) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
             bail!(
                 "Cannot collapse row in current state: {:?}",
@@ -246,10 +246,10 @@ impl App {
         };
 
         let table_data = self.get_table_data_mut()?;
-        table_data.collapse_row()
+        table_data.collapse_row(row)
     }
 
-    pub fn expand_col(&mut self) -> Result<()> {
+    pub fn expand_col(&mut self, col_name: &str) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
             bail!(
                 "Cannot expand col in current state: {:?}",
@@ -258,10 +258,10 @@ impl App {
         };
 
         let table_data = self.get_table_data_mut()?;
-        table_data.expand_col()
+        table_data.expand_col(col_name)
     }
 
-    pub fn collapse_col(&mut self) -> Result<()> {
+    pub fn collapse_col(&mut self, col: usize) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
             bail!(
                 "Cannot collapse col in current state: {:?}",
@@ -270,7 +270,7 @@ impl App {
         };
 
         let table_data = self.get_table_data_mut()?;
-        table_data.collapse_col()
+        table_data.collapse_col(col)
     }
 
     pub fn jump_cursor(&mut self, row: usize, col: usize) -> Result<()> {
@@ -354,7 +354,7 @@ mod tests {
         // create 2x2 table
         let mut table_data = TableData::new().unwrap();
         table_data.expand_row().unwrap();
-        table_data.expand_col().unwrap();
+        table_data.expand_col("header").unwrap();
         table_data.update_cell(0, 0, "value0-0").unwrap();
         table_data.update_cell(1, 0, "value1-0").unwrap();
         table_data.update_cell(0, 1, "value0-1").unwrap();
