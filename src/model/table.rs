@@ -1,14 +1,22 @@
 use std::path::PathBuf;
 
-use eyre::{bail, eyre, Result};
+use eyre::{bail, Result};
+
+use crate::error::StrataError;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct TableName(String);
 
+impl ToString for TableName {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
 impl TableName {
     pub fn from(name: &str) -> Result<Self> {
         if name.is_empty() {
-            Err(eyre!("Table name cannot be empty"))
+            bail!(StrataError::InvalidTableName)
         } else {
             Ok(Self(name.to_string()))
         }
@@ -42,26 +50,22 @@ impl TableData {
     }
 
     pub fn get_cell(&self, row: usize, col: usize) -> Result<&str> {
-        if row >= self.rows.len() || col >= self.headers.len() {
-            bail!("Invalid row or column index")
-        }
+        self.is_valid_row_index(row)?;
+        self.is_valid_col_index(col)?;
 
         Ok(&self.rows[row][col])
     }
 
     pub fn update_header(&mut self, col: usize, value: &str) -> Result<()> {
-        if col >= self.headers.len() {
-            bail!("Invalid column index")
-        }
+        self.is_valid_col_index(col)?;
 
         self.headers[col] = value.to_string();
         Ok(())
     }
 
     pub fn update_cell(&mut self, row: usize, col: usize, value: &str) -> Result<()> {
-        if row >= self.rows.len() || col >= self.headers.len() {
-            bail!("Invalid row or column index")
-        }
+        self.is_valid_row_index(row)?;
+        self.is_valid_col_index(col)?;
 
         self.rows[row][col] = value.to_string();
         Ok(())
@@ -73,9 +77,8 @@ impl TableData {
     }
 
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
-        if row >= self.rows.len() {
-            bail!("out of bounds")
-        }
+        self.is_valid_row_index(row)?;
+
         self.rows.remove(row);
         Ok(())
     }
@@ -89,12 +92,31 @@ impl TableData {
     }
 
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
-        if col >= self.rows.len() {
-            bail!("out of bounds")
-        }
+        self.is_valid_col_index(col)?;
+
         self.headers.remove(col);
         for row in self.rows.iter_mut() {
             row.remove(col);
+        }
+        Ok(())
+    }
+
+    fn is_valid_row_index(&self, row: usize) -> Result<()> {
+        if row >= self.rows.len() {
+            bail!(StrataError::InvalidRowIndex {
+                max: self.rows.len() - 1,
+                requested: row,
+            })
+        }
+        Ok(())
+    }
+
+    fn is_valid_col_index(&self, col: usize) -> Result<()> {
+        if col >= self.headers.len() {
+            bail!(StrataError::InvalidColumnIndex {
+                max: self.headers.len() - 1,
+                requested: col,
+            })
         }
         Ok(())
     }
@@ -120,7 +142,10 @@ mod tests {
         assert_eq!(table_name.as_str(), "test_table");
 
         let table_name_err = TableName::from("").unwrap_err();
-        assert_eq!(table_name_err.to_string(), "Table name cannot be empty");
+        assert_eq!(
+            table_name_err.to_string(),
+            StrataError::InvalidTableName.to_string()
+        );
     }
 
     #[test]
@@ -149,6 +174,16 @@ mod tests {
         assert_eq!(table_data.rows.len(), 1);
         assert_eq!(table_data.rows[0][0], "cell10");
         assert_eq!(table_data.rows[0][1], "cell11");
+
+        let row_err = table_data.collapse_row(1).unwrap_err();
+        assert_eq!(
+            row_err.to_string(),
+            StrataError::InvalidRowIndex {
+                max: 0,
+                requested: 1
+            }
+            .to_string()
+        );
     }
 
     #[test]
@@ -170,6 +205,16 @@ mod tests {
         assert_eq!(table_data.headers.len(), 1);
         assert_eq!(table_data.rows[0][0], "cell01");
         assert_eq!(table_data.rows[1][0], "cell11");
+
+        let col_err = table_data.collapse_col(1).unwrap_err();
+        assert_eq!(
+            col_err.to_string(),
+            StrataError::InvalidColumnIndex {
+                max: 0,
+                requested: 1
+            }
+            .to_string()
+        );
     }
 
     #[test]
@@ -177,9 +222,34 @@ mod tests {
         let mut table_data = setup_table_data();
 
         table_data.update_cell(0, 0, "test").unwrap();
-        assert_eq!(table_data.get_cell(0, 0).unwrap(), "test");
+        assert_eq!(table_data.rows[0][0], "test");
+    }
 
-        let cell_err = table_data.get_cell(2, 0).unwrap_err();
-        assert_eq!(cell_err.to_string(), "Invalid row or column index");
+    #[test]
+    fn test_get_cell() {
+        let table_data = setup_table_data();
+
+        assert_eq!(table_data.get_cell(0, 0).unwrap(), "cell00");
+        assert_eq!(table_data.get_cell(1, 1).unwrap(), "cell11");
+
+        // Invalid row index
+        assert_eq!(
+            table_data.get_cell(2, 0).unwrap_err().to_string(),
+            StrataError::InvalidRowIndex {
+                max: 1,
+                requested: 2
+            }
+            .to_string()
+        );
+
+        // Invalid column index
+        assert_eq!(
+            table_data.get_cell(0, 2).unwrap_err().to_string(),
+            StrataError::InvalidColumnIndex {
+                max: 1,
+                requested: 2
+            }
+            .to_string()
+        );
     }
 }

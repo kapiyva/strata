@@ -18,6 +18,17 @@ impl Default for DisplayState {
     }
 }
 
+impl ToString for DisplayState {
+    fn to_string(&self) -> String {
+        match self {
+            DisplayState::AddTable(_) => "AddTable".to_string(),
+            DisplayState::SelectTable(_) => "SelectTable".to_string(),
+            DisplayState::DisplayTable(_) => "DisplayTable".to_string(),
+            DisplayState::EditCell(_) => "EditCell".to_string(),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct AddTableState {
     pub selected_cell: Option<SelectedCell>,

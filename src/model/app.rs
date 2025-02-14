@@ -8,6 +8,8 @@ use state::{
     AddTableState, DisplayState, DisplayTableState, EditCellState, SelectTableState, SelectedCell,
 };
 
+use crate::error::StrataError;
+
 use super::table::{TableData, TableName};
 
 #[derive(Default)]
@@ -30,16 +32,16 @@ impl App {
         self.table_map.keys().collect()
     }
 
-    pub fn get_selected_table_name(&self) -> Option<&TableName> {
+    pub fn get_selected_table_name(&self) -> Option<String> {
         match &self.display_state {
             DisplayState::AddTable(AddTableState { selected_cell })
-            | DisplayState::SelectTable(SelectTableState { selected_cell }) => selected_cell
-                .as_ref()
-                .map(|selected_cell| &selected_cell.table_name),
+            | DisplayState::SelectTable(SelectTableState { selected_cell }) => {
+                selected_cell.as_ref().map(|sc| sc.table_name.to_string())
+            }
 
             DisplayState::DisplayTable(DisplayTableState { selected_cell })
             | DisplayState::EditCell(EditCellState { selected_cell }) => {
-                Some(&selected_cell.table_name)
+                Some(selected_cell.table_name.to_string())
             }
         }
     }
@@ -72,10 +74,10 @@ impl App {
                 });
                 Ok(())
             }
-            _ => bail!(
-                "Cannot change add table state from current state: {:?}",
-                self.display_state
-            ),
+            _ => bail!(StrataError::InvalidOperationCall {
+                operation: "set state AddTable".to_string(),
+                state: self.display_state.to_string()
+            }),
         }
     }
 
@@ -100,10 +102,10 @@ impl App {
                 });
                 Ok(())
             }
-            _ => bail!(
-                "Cannot change select table state from current state: {:?}",
-                self.display_state
-            ),
+            _ => bail!(StrataError::InvalidOperationCall {
+                operation: "set state SelectTable".to_string(),
+                state: self.display_state.to_string()
+            }),
         }
     }
 
@@ -113,10 +115,10 @@ impl App {
         // Only allow changing to EditCell state from DisplayTable state
         let DisplayState::DisplayTable(DisplayTableState { selected_cell }) = &self.display_state
         else {
-            bail!(
-                "Cannot change edit cell state from current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "set state EditCell".to_string(),
+                state: self.display_state.to_string()
+            });
         };
         self.display_state = DisplayState::EditCell(EditCellState {
             selected_cell: selected_cell.clone(),
@@ -130,15 +132,15 @@ impl App {
     pub fn add_table(&mut self, table_name_str: &str) -> Result<()> {
         // Only allow adding table in AddTable state
         let DisplayState::AddTable(_) = self.display_state else {
-            bail!(
-                "Cannot add table in current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "add table".to_string(),
+                state: self.display_state.to_string()
+            });
         };
 
         let table_name = TableName::from(table_name_str)?;
         if self.table_map.contains_key(&table_name) {
-            bail!("Table already exists");
+            bail!(StrataError::TableDuplicate(table_name_str.to_string()));
         }
 
         self.table_map.insert(table_name.clone(), TableData::new()?);
@@ -153,7 +155,7 @@ impl App {
     pub fn select_table(&mut self, table_name_str: &str) -> Result<()> {
         let table_name = TableName::from(table_name_str)?;
         if !self.table_map.contains_key(&table_name) {
-            bail!("Table does not exist");
+            bail!(StrataError::TableNotFound(table_name_str.to_string()));
         };
 
         match &self.display_state {
@@ -178,10 +180,10 @@ impl App {
                     selected_cell: SelectedCell::new(table_name),
                 });
             }
-            _ => bail!(
-                "Cannot select table in current state: {:?}",
-                self.display_state
-            ),
+            _ => bail!(StrataError::InvalidOperationCall {
+                operation: "select table".to_string(),
+                state: self.display_state.to_string()
+            }),
         };
         Ok(())
     }
@@ -195,10 +197,10 @@ impl App {
             let DisplayState::DisplayTable(DisplayTableState { selected_cell: sc }) =
                 &self.display_state
             else {
-                bail!(
-                    "Cannot move cursor in current state: {:?}",
-                    self.display_state
-                );
+                bail!(StrataError::InvalidOperationCall {
+                    operation: "move cursor".to_string(),
+                    state: self.display_state.to_string()
+                });
             };
 
             selected_cell = sc.clone();
@@ -224,10 +226,10 @@ impl App {
     /// Expand the row
     pub fn expand_row(&mut self) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
-            bail!(
-                "Cannot expand row in current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "expand row".to_string(),
+                state: self.display_state.to_string()
+            });
         };
 
         let table_data = self.get_table_data_mut()?;
@@ -239,10 +241,10 @@ impl App {
     /// Collapse the row
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
-            bail!(
-                "Cannot collapse row in current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "collapse row".to_string(),
+                state: self.display_state.to_string()
+            });
         };
 
         let table_data = self.get_table_data_mut()?;
@@ -251,10 +253,10 @@ impl App {
 
     pub fn expand_col(&mut self, col_name: &str) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
-            bail!(
-                "Cannot expand col in current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "expand col".to_string(),
+                state: self.display_state.to_string()
+            });
         };
 
         let table_data = self.get_table_data_mut()?;
@@ -263,10 +265,10 @@ impl App {
 
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
         let DisplayState::DisplayTable(_) = &self.display_state else {
-            bail!(
-                "Cannot collapse col in current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "collapse col".to_string(),
+                state: self.display_state.to_string()
+            });
         };
 
         let table_data = self.get_table_data_mut()?;
@@ -277,13 +279,17 @@ impl App {
         // Only allow jumping cursor in DisplayTable state
         let DisplayState::DisplayTable(DisplayTableState { selected_cell }) = &self.display_state
         else {
-            bail!(
-                "Cannot jump cursor in current state: {:?}",
-                self.display_state
-            );
+            bail!(StrataError::InvalidOperationCall {
+                operation: "jump cursor".to_string(),
+                state: self.display_state.to_string()
+            });
         };
 
-        let table_data = self.get_table_data().ok_or_eyre("table not found")?;
+        let table_data = self
+            .get_table_data()
+            .ok_or_eyre(StrataError::TableNotFound(
+                self.get_selected_table_name().unwrap_or("".to_string()),
+            ))?;
         if row < table_data.rows.len() && col < table_data.headers.len() {
             self.display_state = DisplayState::DisplayTable(DisplayTableState {
                 selected_cell: SelectedCell {
@@ -302,13 +308,15 @@ impl App {
             DisplayState::DisplayTable(DisplayTableState { selected_cell })
             | DisplayState::EditCell(EditCellState { selected_cell }) => self
                 .get_table_data()
-                .ok_or_eyre("table not found")?
+                .ok_or_eyre(StrataError::TableNotFound(
+                    self.get_selected_table_name().unwrap_or("".to_string()),
+                ))?
                 .get_cell(selected_cell.row, selected_cell.col)
                 .map(|s| s.to_string()),
-            _ => bail!(
-                "Cannot get cell value in current state: {:?}",
-                self.display_state
-            ),
+            _ => bail!(StrataError::InvalidOperationCall {
+                operation: "get cell value".to_string(),
+                state: self.display_state.to_string()
+            }),
         }
     }
 
@@ -317,10 +325,10 @@ impl App {
         {
             let DisplayState::EditCell(EditCellState { selected_cell: sc }) = &self.display_state
             else {
-                bail!(
-                    "Cannot update cell value in current state: {:?}",
-                    self.display_state
-                );
+                bail!(StrataError::InvalidOperationCall {
+                    operation: "update cell".to_string(),
+                    state: self.display_state.to_string()
+                });
             };
 
             selected_cell = sc.clone();
@@ -333,11 +341,11 @@ impl App {
     fn get_table_data_mut(&mut self) -> Result<&mut TableData> {
         let table_name = self
             .get_selected_table_name()
-            .ok_or_eyre("No table selected")?
+            .ok_or_eyre(StrataError::NoTableSelected)?
             .clone();
         self.table_map
-            .get_mut(&table_name)
-            .ok_or_eyre(format!("Table not found: {}", table_name.as_str()))
+            .get_mut(&TableName::from(&table_name)?)
+            .ok_or_eyre(StrataError::TableNotFound(table_name))
     }
 }
 
@@ -400,17 +408,11 @@ mod tests {
 
         app.set_state_select_table().unwrap();
         app.select_table("table1").unwrap();
-        assert_eq!(
-            app.get_selected_table_name(),
-            Some(&TableName::from("table1").unwrap())
-        );
+        assert_eq!(app.get_selected_table_name(), Some("table1".to_string()));
 
         app.set_state_select_table().unwrap();
         app.select_table("table2").unwrap();
-        assert_eq!(
-            app.get_selected_table_name(),
-            Some(&TableName::from("table2").unwrap())
-        );
+        assert_eq!(app.get_selected_table_name(), Some("table2".to_string()));
     }
 
     #[test]
