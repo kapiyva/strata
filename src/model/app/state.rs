@@ -1,8 +1,8 @@
 use crate::model::table::TableName;
-
 const DEFAULT_CELL_INDEX: usize = 0;
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum DisplayState {
     AddTable(AddTableState),
     SelectTable(SelectTableState),
@@ -14,6 +14,8 @@ impl Default for DisplayState {
     fn default() -> Self {
         DisplayState::SelectTable(SelectTableState {
             selected_cell: None,
+            table_list: Vec::new(),
+            cursor: 0,
         })
     }
 }
@@ -30,23 +32,32 @@ impl ToString for DisplayState {
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct AddTableState {
     pub selected_cell: Option<SelectedCell>,
+    pub table_list: Vec<TableName>,
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct SelectTableState {
     pub selected_cell: Option<SelectedCell>,
+    pub table_list: Vec<TableName>,
+    pub cursor: usize,
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct DisplayTableState {
     pub selected_cell: SelectedCell,
+    pub table_list: Vec<TableName>,
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct EditCellState {
     pub selected_cell: SelectedCell,
+    pub table_list: Vec<TableName>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

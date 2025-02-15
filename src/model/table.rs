@@ -28,6 +28,7 @@ impl TableName {
 }
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct TableData {
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,
