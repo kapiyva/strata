@@ -231,7 +231,7 @@ impl App {
                 cursor,
             }) => {
                 if table_list.is_empty() {
-                    bail!(StrataError::TableNotFound("".to_string()));
+                    bail!(StrataError::NoTableAdded);
                 }
                 let table_name = table_list[*cursor].clone();
                 // Only change the table if the selected table is different
@@ -253,7 +253,7 @@ impl App {
                 cursor,
             }) => {
                 if table_list.is_empty() {
-                    bail!(StrataError::TableNotFound("".to_string()));
+                    bail!(StrataError::NoTableAdded);
                 }
                 let table_name = table_list[*cursor].clone();
                 self.display_state = DisplayState::DisplayTable(DisplayTableState {
@@ -269,35 +269,31 @@ impl App {
         Ok(())
     }
 
-    /// Call from DisplayTable state
+    /// Call from SelectTable state
     /// Remove the selected table
     pub fn remove_table(&mut self) -> Result<()> {
-        // remove table from table_map
-        let table_name = self
-            .get_selected_table_name()
-            .ok_or_eyre(StrataError::NoTableSelected)?
-            .clone();
-        self.table_map.remove(&table_name);
+        let DisplayState::SelectTable(SelectTableState {
+            table_list, cursor, ..
+        }) = &mut self.display_state
+        else {
+            bail!(StrataError::InvalidOperationCall {
+                operation: "remove table".to_string(),
+                state: self.display_state.to_string()
+            });
+        };
+
         // remove table from table_list
-        let mut table_list;
-        {
-            match &self.display_state {
-                DisplayState::DisplayTable(DisplayTableState { table_list: tl, .. })
-                | DisplayState::EditCell(EditCellState { table_list: tl, .. })
-                | DisplayState::AddTable(AddTableState { table_list: tl, .. })
-                | DisplayState::SelectTable(SelectTableState { table_list: tl, .. }) => {
-                    table_list = tl.clone();
-                }
-            }
-        }
         if table_list.is_empty() {
-            bail!(StrataError::TableNotFound(table_name.to_string()));
+            bail!(StrataError::NoTableAdded);
         }
+        // remove table from table_map
+        let table_name = table_list[*cursor].clone();
+        self.table_map.remove(&table_name);
 
         table_list.retain(|tn| tn != &table_name);
         self.display_state = DisplayState::SelectTable(SelectTableState {
             selected_cell: Some(SelectedCell::new(table_list[0].clone())),
-            table_list,
+            table_list: table_list.clone(),
             cursor: 0,
         });
 
@@ -541,6 +537,17 @@ mod tests {
         assert!(app
             .get_all_table_names()
             .contains(&&TableName::from("table1").unwrap()));
+        assert!(app
+            .get_all_table_names()
+            .contains(&&TableName::from("table2").unwrap()));
+    }
+
+    #[test]
+    fn test_remove_table() {
+        let mut app = setup_select_table_app();
+
+        app.remove_table().unwrap();
+        assert_eq!(app.get_all_table_names().len(), 1);
         assert!(app
             .get_all_table_names()
             .contains(&&TableName::from("table2").unwrap()));

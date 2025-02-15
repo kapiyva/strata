@@ -11,6 +11,9 @@ pub enum StrataError {
     #[error("Table not found: table_name:[{0}]")]
     TableNotFound(String),
 
+    #[error("No table added")]
+    NoTableAdded,
+
     #[error("No table selected")]
     NoTableSelected,
 
