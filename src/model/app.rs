@@ -14,12 +14,18 @@ use super::table::{TableData, TableName};
 pub struct App {
     display_state: DisplayState,
     table_map: HashMap<TableName, TableData>,
+    exiting: bool,
 }
 
 impl App {
     /// Setup a new App as SelectTable state
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn set_exit(&mut self, exit: bool) -> Result<()> {
+        self.exiting = exit;
+        Ok(())
     }
 
     pub fn get_display_state(&self) -> &DisplayState {
