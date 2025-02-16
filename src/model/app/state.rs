@@ -6,7 +6,7 @@ const DEFAULT_CELL_INDEX: usize = 0;
 pub enum DisplayState {
     AddTable(AddTableState),
     SelectTable(SelectTableState),
-    DisplayTable(DisplayTableState),
+    SelectCell(DisplayTableState),
     EditCell(EditCellState),
 }
 
@@ -15,7 +15,7 @@ impl Default for DisplayState {
         DisplayState::SelectTable(SelectTableState {
             selected_cell: None,
             table_list: Vec::new(),
-            cursor: 0,
+            selected_table: 0,
         })
     }
 }
@@ -25,7 +25,7 @@ impl ToString for DisplayState {
         match self {
             DisplayState::AddTable(_) => "AddTable".to_string(),
             DisplayState::SelectTable(_) => "SelectTable".to_string(),
-            DisplayState::DisplayTable(_) => "DisplayTable".to_string(),
+            DisplayState::SelectCell(_) => "DisplayTable".to_string(),
             DisplayState::EditCell(_) => "EditCell".to_string(),
         }
     }
@@ -43,7 +43,7 @@ pub struct AddTableState {
 pub struct SelectTableState {
     pub selected_cell: Option<SelectedCell>,
     pub table_list: Vec<TableName>,
-    pub cursor: usize,
+    pub selected_table: usize,
 }
 
 #[derive(Debug)]

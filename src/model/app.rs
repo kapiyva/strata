@@ -1,6 +1,6 @@
 pub mod state;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, mem};
 
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
@@ -34,7 +34,7 @@ impl App {
 
     pub fn get_all_table_names(&self) -> &Vec<TableName> {
         match &self.display_state {
-            DisplayState::DisplayTable(DisplayTableState { table_list, .. })
+            DisplayState::SelectCell(DisplayTableState { table_list, .. })
             | DisplayState::EditCell(EditCellState { table_list, .. })
             | DisplayState::AddTable(AddTableState { table_list, .. })
             | DisplayState::SelectTable(SelectTableState { table_list, .. }) => table_list,
@@ -48,7 +48,7 @@ impl App {
                 selected_cell.as_ref().map(|sc| &sc.table_name)
             }
 
-            DisplayState::DisplayTable(DisplayTableState { selected_cell, .. })
+            DisplayState::SelectCell(DisplayTableState { selected_cell, .. })
             | DisplayState::EditCell(EditCellState { selected_cell, .. }) => {
                 Some(&selected_cell.table_name)
             }
@@ -62,7 +62,7 @@ impl App {
                 selected_cell.as_ref()
             }
 
-            DisplayState::DisplayTable(DisplayTableState { selected_cell, .. })
+            DisplayState::SelectCell(DisplayTableState { selected_cell, .. })
             | DisplayState::EditCell(EditCellState { selected_cell, .. }) => Some(selected_cell),
         }
     }
@@ -80,44 +80,51 @@ impl App {
     /// Call from SelectTable state
     /// Change the display state to AddTable state
     pub fn set_state_add_table(&mut self) -> Result<()> {
-        match &self.display_state {
+        let ds = mem::take(&mut self.display_state);
+        match ds {
             DisplayState::SelectTable(SelectTableState {
                 selected_cell,
                 table_list,
                 ..
             }) => {
                 self.display_state = DisplayState::AddTable(AddTableState {
-                    selected_cell: selected_cell.clone(),
-                    table_list: table_list.clone(),
+                    selected_cell,
+                    table_list,
                 });
                 Ok(())
             }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set state AddTable".to_string(),
-                state: self.display_state.to_string()
-            }),
+            _ => {
+                self.display_state = ds;
+                bail!(StrataError::InvalidOperationCall {
+                    operation: "set state AddTable".to_string(),
+                    state: self.display_state.to_string()
+                })
+            }
         }
     }
 
     /// Call from AddTable or DisplayTable state
     /// Change the display state to SelectTable
     pub fn set_state_select_table(&mut self) -> Result<()> {
-        match &self.display_state {
+        let ds = mem::take(&mut self.display_state);
+        match ds {
             DisplayState::AddTable(AddTableState {
                 selected_cell: Some(selected_cell),
                 table_list,
             })
-            | DisplayState::DisplayTable(DisplayTableState {
+            | DisplayState::SelectCell(DisplayTableState {
                 selected_cell,
                 table_list,
             }) => {
+                let selected_table = table_list
+                    .iter()
+                    .position(|tn| tn == &selected_cell.table_name)
+                    .unwrap_or(0);
+
                 self.display_state = DisplayState::SelectTable(SelectTableState {
-                    selected_cell: Some(selected_cell.clone()),
-                    table_list: table_list.clone(),
-                    cursor: table_list
-                        .iter()
-                        .position(|tn| tn == &selected_cell.table_name)
-                        .unwrap_or(0),
+                    selected_cell: Some(selected_cell),
+                    table_list,
+                    selected_table,
                 });
                 Ok(())
             }
@@ -127,35 +134,40 @@ impl App {
             }) => {
                 self.display_state = DisplayState::SelectTable(SelectTableState {
                     selected_cell: None,
-                    table_list: table_list.clone(),
-                    cursor: 0,
+                    table_list,
+                    selected_table: 0,
                 });
                 Ok(())
             }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set state SelectTable".to_string(),
-                state: self.display_state.to_string()
-            }),
+            _ => {
+                self.display_state = ds;
+                bail!(StrataError::InvalidOperationCall {
+                    operation: "set state SelectTable".to_string(),
+                    state: self.display_state.to_string()
+                })
+            }
         }
     }
 
     /// Call from DisplayTable state
     /// Change the display state to EditCell
     pub fn set_state_edit_cell(&mut self) -> Result<()> {
+        let ds = mem::take(&mut self.display_state);
         // Only allow changing to EditCell state from DisplayTable state
-        let DisplayState::DisplayTable(DisplayTableState {
+        let DisplayState::SelectCell(DisplayTableState {
             selected_cell,
             table_list,
-        }) = &self.display_state
+        }) = ds
         else {
+            self.display_state = ds;
             bail!(StrataError::InvalidOperationCall {
                 operation: "set state EditCell".to_string(),
                 state: self.display_state.to_string()
             });
         };
         self.display_state = DisplayState::EditCell(EditCellState {
-            selected_cell: selected_cell.clone(),
-            table_list: table_list.clone(),
+            selected_cell,
+            table_list,
         });
 
         Ok(())
@@ -165,7 +177,8 @@ impl App {
     /// Add new table and change to DisplayTable state
     pub fn add_table(&mut self, table_name_str: &str) -> Result<()> {
         // Only allow adding table in AddTable state
-        let DisplayState::AddTable(AddTableState { table_list, .. }) = &mut self.display_state
+        let DisplayState::AddTable(AddTableState { table_list, .. }) =
+            &mut mem::take(&mut self.display_state)
         else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "add table".to_string(),
@@ -180,7 +193,7 @@ impl App {
 
         self.table_map.insert(table_name.clone(), TableData::new()?);
         table_list.push(table_name.clone());
-        self.display_state = DisplayState::DisplayTable(DisplayTableState {
+        self.display_state = DisplayState::SelectCell(DisplayTableState {
             selected_cell: SelectedCell::new(table_name),
             table_list: table_list.clone(),
         });
@@ -192,12 +205,14 @@ impl App {
     pub fn down_table_selector(&mut self) -> Result<()> {
         match &mut self.display_state {
             DisplayState::SelectTable(SelectTableState {
-                cursor, table_list, ..
+                table_list,
+                selected_table,
+                ..
             }) => {
-                if *cursor < table_list.len() - 1 {
-                    *cursor += 1;
+                if *selected_table < table_list.len() - 1 {
+                    *selected_table += 1;
                 } else {
-                    *cursor = table_list.len();
+                    *selected_table = table_list.len();
                 }
                 Ok(())
             }
@@ -212,11 +227,11 @@ impl App {
     /// Move the table selector up
     pub fn up_table_selector(&mut self) -> Result<()> {
         match &mut self.display_state {
-            DisplayState::SelectTable(SelectTableState { cursor, .. }) => {
-                if *cursor > 0 {
-                    *cursor -= 1;
+            DisplayState::SelectTable(SelectTableState { selected_table, .. }) => {
+                if *selected_table > 0 {
+                    *selected_table -= 1;
                 } else {
-                    *cursor = 0;
+                    *selected_table = 0;
                 }
                 Ok(())
             }
@@ -234,20 +249,20 @@ impl App {
             DisplayState::SelectTable(SelectTableState {
                 selected_cell: Some(already_selected_cell),
                 table_list,
-                cursor,
+                selected_table,
             }) => {
                 if table_list.is_empty() {
                     bail!(StrataError::NoTableAdded);
                 }
-                let table_name = table_list[*cursor].clone();
+                let table_name = table_list[*selected_table].clone();
                 // Only change the table if the selected table is different
                 if already_selected_cell.table_name != table_name {
-                    self.display_state = DisplayState::DisplayTable(DisplayTableState {
+                    self.display_state = DisplayState::SelectCell(DisplayTableState {
                         selected_cell: SelectedCell::new(table_name),
                         table_list: table_list.clone(),
                     });
                 } else {
-                    self.display_state = DisplayState::DisplayTable(DisplayTableState {
+                    self.display_state = DisplayState::SelectCell(DisplayTableState {
                         selected_cell: already_selected_cell.clone(),
                         table_list: table_list.clone(),
                     });
@@ -256,13 +271,13 @@ impl App {
             DisplayState::SelectTable(SelectTableState {
                 selected_cell: None,
                 table_list,
-                cursor,
+                selected_table,
             }) => {
                 if table_list.is_empty() {
                     bail!(StrataError::NoTableAdded);
                 }
-                let table_name = table_list[*cursor].clone();
-                self.display_state = DisplayState::DisplayTable(DisplayTableState {
+                let table_name = table_list[*selected_table].clone();
+                self.display_state = DisplayState::SelectCell(DisplayTableState {
                     selected_cell: SelectedCell::new(table_name),
                     table_list: table_list.clone(),
                 });
@@ -279,7 +294,9 @@ impl App {
     /// Remove the selected table
     pub fn remove_table(&mut self) -> Result<()> {
         let DisplayState::SelectTable(SelectTableState {
-            table_list, cursor, ..
+            table_list,
+            selected_table,
+            ..
         }) = &mut self.display_state
         else {
             bail!(StrataError::InvalidOperationCall {
@@ -293,14 +310,14 @@ impl App {
             bail!(StrataError::NoTableAdded);
         }
         // remove table from table_map
-        let table_name = table_list[*cursor].clone();
+        let table_name = table_list[*selected_table].clone();
         self.table_map.remove(&table_name);
 
         table_list.retain(|tn| tn != &table_name);
         self.display_state = DisplayState::SelectTable(SelectTableState {
             selected_cell: Some(SelectedCell::new(table_list[0].clone())),
             table_list: table_list.clone(),
-            cursor: 0,
+            selected_table: 0,
         });
 
         Ok(())
@@ -313,7 +330,7 @@ impl App {
         let table_list;
         {
             // Only allow moving cursor in DisplayTable state
-            let DisplayState::DisplayTable(DisplayTableState {
+            let DisplayState::SelectCell(DisplayTableState {
                 selected_cell: sc,
                 table_list: tl,
             }) = &self.display_state
@@ -332,7 +349,7 @@ impl App {
         let new_row = (selected_cell.row as isize + row).max(0) as usize;
         let new_col = (selected_cell.col as isize + col).max(0) as usize;
         if new_row < table_data.rows.len() && new_col < table_data.headers.len() {
-            self.display_state = DisplayState::DisplayTable(DisplayTableState {
+            self.display_state = DisplayState::SelectCell(DisplayTableState {
                 selected_cell: SelectedCell {
                     table_name: selected_cell.table_name.clone(),
                     row: new_row,
@@ -349,7 +366,7 @@ impl App {
     /// Jump the cursor to the specified cell
     pub fn jump_cell_selector(&mut self, row: usize, col: usize) -> Result<()> {
         // Only allow jumping cursor in DisplayTable state
-        let DisplayState::DisplayTable(DisplayTableState {
+        let DisplayState::SelectCell(DisplayTableState {
             selected_cell,
             table_list,
         }) = &self.display_state
@@ -363,7 +380,7 @@ impl App {
         let table_data = self.get_table_data()?;
         table_data.is_valid_row_index(row)?;
         table_data.is_valid_col_index(col)?;
-        self.display_state = DisplayState::DisplayTable(DisplayTableState {
+        self.display_state = DisplayState::SelectCell(DisplayTableState {
             selected_cell: SelectedCell {
                 table_name: selected_cell.table_name.clone(),
                 row,
@@ -378,7 +395,7 @@ impl App {
     /// Call from DisplayTable state
     /// Expand the row
     pub fn expand_row(&mut self) -> Result<()> {
-        let DisplayState::DisplayTable(_) = &self.display_state else {
+        let DisplayState::SelectCell(_) = &self.display_state else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "expand row".to_string(),
                 state: self.display_state.to_string()
@@ -393,7 +410,7 @@ impl App {
     /// Call from DisplayTable display state
     /// Collapse the row
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
-        let DisplayState::DisplayTable(_) = &self.display_state else {
+        let DisplayState::SelectCell(_) = &self.display_state else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "collapse row".to_string(),
                 state: self.display_state.to_string()
@@ -405,7 +422,7 @@ impl App {
     }
 
     pub fn expand_col(&mut self, col_name: &str) -> Result<()> {
-        let DisplayState::DisplayTable(_) = &self.display_state else {
+        let DisplayState::SelectCell(_) = &self.display_state else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "expand col".to_string(),
                 state: self.display_state.to_string()
@@ -417,7 +434,7 @@ impl App {
     }
 
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
-        let DisplayState::DisplayTable(_) = &self.display_state else {
+        let DisplayState::SelectCell(_) = &self.display_state else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "collapse col".to_string(),
                 state: self.display_state.to_string()
@@ -430,7 +447,7 @@ impl App {
 
     pub fn get_cell_value(&self) -> Result<&str> {
         match &self.display_state {
-            DisplayState::DisplayTable(DisplayTableState { selected_cell, .. })
+            DisplayState::SelectCell(DisplayTableState { selected_cell, .. })
             | DisplayState::EditCell(EditCellState { selected_cell, .. }) => self
                 .get_table_data()?
                 .get_cell_value(selected_cell.row, selected_cell.col),
@@ -498,7 +515,7 @@ mod tests {
         app.display_state = DisplayState::SelectTable(SelectTableState {
             selected_cell: None,
             table_list: vec![table_name_1, table_name_2],
-            cursor: 0,
+            selected_table: 0,
         });
 
         app
@@ -521,7 +538,7 @@ mod tests {
             .insert(table_name_1.clone(), table_data.clone());
         app.table_map.insert(table_name_2.clone(), table_data);
         // set display state to DisplayTable
-        app.display_state = DisplayState::DisplayTable(DisplayTableState {
+        app.display_state = DisplayState::SelectCell(DisplayTableState {
             selected_cell: SelectedCell::new(table_name_1.clone()),
             table_list: vec![table_name_1, table_name_2],
         });
@@ -583,7 +600,7 @@ mod tests {
                     TableName::from("table1").unwrap(),
                     TableName::from("table2").unwrap()
                 ],
-                cursor: 1,
+                selected_table: 1,
             })
         );
         app.select_table().unwrap();
