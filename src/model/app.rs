@@ -128,6 +128,8 @@ impl App {
         self.table_map.insert(table_name.clone(), TableData::new()?);
         self.table_list.push(table_name.clone());
         self.display_mode = DisplayMode::SelectCell;
+        self.table_selector_index = Some(self.table_list.len() - 1);
+        self.cell_selector_index = Some((0, 0));
         Ok(())
     }
 
@@ -197,9 +199,7 @@ impl App {
         }
 
         self.display_mode = DisplayMode::SelectCell;
-        if self.cell_selector_index.is_none() {
-            self.cell_selector_index = Some((0, 0));
-        }
+        self.cell_selector_index = Some((0, 0));
         Ok(())
     }
 
@@ -213,11 +213,9 @@ impl App {
             });
         };
 
-        // remove table from table_list
         if self.table_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
-        // remove table from table_map
         let target_table_name = self
             .get_selected_table_name()
             .ok_or_eyre(StrataError::NoTableSelected)?
@@ -226,6 +224,8 @@ impl App {
         self.table_map.remove(&target_table_name);
         self.table_list.retain(|tn| tn != &target_table_name);
         self.display_mode = DisplayMode::SelectTable;
+        self.table_selector_index = Some(0);
+        self.cell_selector_index = None;
         Ok(())
     }
 
@@ -518,6 +518,7 @@ mod tests {
             app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
+
         // (1,1)
         app.move_cell_selector(0, 1).expect(&format!(
             "move_cursor failed: {:?}",
@@ -530,6 +531,7 @@ mod tests {
             app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-1");
+
         // (0,1)
         app.move_cell_selector(-1, 0).expect(&format!(
             "move_cursor failed: {:?}",
@@ -542,6 +544,7 @@ mod tests {
             app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
+
         // (0,0)
         app.move_cell_selector(0, -1).expect(&format!(
             "move_cursor failed: {:?}",
