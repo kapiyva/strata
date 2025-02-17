@@ -9,6 +9,7 @@ use handler::*;
 pub enum Message {
     AddTableMode,
     SelectTableMode,
+    SelectCellMode,
     EditCellMode,
     NewTable(String),
     OpenCsv(PathBuf),
@@ -19,6 +20,7 @@ pub enum Message {
     SaveCellValue(String),
     Exiting,
     CancelExit,
+    NoOp,
 }
 
 pub enum MoveDirection {
@@ -33,6 +35,7 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::AddTableMode => app.set_state_add_table(),
         Message::SelectTableMode => app.set_state_select_table(),
         Message::EditCellMode => app.set_state_edit_cell(),
+        Message::SelectCellMode => app.set_state_select_cell(),
         Message::NewTable(table_name) => app.add_table(&table_name),
         // Message::OpenCsv(path) => model.open_csv(path),
         Message::Move(direction) => move_cursor_handler(app, direction),
@@ -42,6 +45,7 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::SaveCellValue(value) => app.update_cell_value(&value),
         Message::Exiting => app.set_exit(true),
         Message::CancelExit => app.set_exit(false),
+        Message::NoOp => Ok(()),
         _ => bail!("Message handler not implemented"),
     }
 }

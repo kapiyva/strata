@@ -5,7 +5,7 @@ use crate::model::app::{state::DisplayMode, App};
 use super::MoveDirection;
 
 pub(super) fn move_cursor_handler(model: &mut App, direction: MoveDirection) -> Result<()> {
-    match model.get_display_state() {
+    match model.get_display_mode() {
         DisplayMode::SelectTable => match direction {
             MoveDirection::Up => model.up_table_selector(),
             MoveDirection::Down => model.down_table_selector(),

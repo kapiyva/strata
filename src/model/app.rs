@@ -27,12 +27,16 @@ impl App {
         Self::default()
     }
 
+    pub fn get_exit(&self) -> bool {
+        self.exiting
+    }
+
     pub fn set_exit(&mut self, exit: bool) -> Result<()> {
         self.exiting = exit;
         Ok(())
     }
 
-    pub fn get_display_state(&self) -> &DisplayMode {
+    pub fn get_display_mode(&self) -> &DisplayMode {
         &self.display_mode
     }
 
@@ -88,6 +92,21 @@ impl App {
             }
             _ => bail!(StrataError::InvalidOperationCall {
                 operation: "set state SelectTable".to_string(),
+                mode: self.display_mode.to_string()
+            }),
+        }
+    }
+
+    // Call from EditCell state
+    // Cancel edit and change the display state to SelectCell
+    pub fn set_state_select_cell(&mut self) -> Result<()> {
+        match &mut self.display_mode {
+            DisplayMode::EditCell => {
+                self.display_mode = DisplayMode::SelectCell;
+                Ok(())
+            }
+            _ => bail!(StrataError::InvalidOperationCall {
+                operation: "set state SelectCell".to_string(),
                 mode: self.display_mode.to_string()
             }),
         }
@@ -373,6 +392,8 @@ impl App {
         let (row, col) = self
             .cell_selector_index
             .ok_or_eyre(StrataError::NoCellSelected)?;
+
+        self.display_mode = DisplayMode::SelectCell;
         self.get_table_data_mut()?.update_cell(row, col, value)
     }
 

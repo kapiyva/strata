@@ -1,5 +1,4 @@
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq, Eq)]
 pub enum DisplayMode {
     AddTable,
     SelectTable,
