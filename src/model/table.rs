@@ -50,6 +50,14 @@ impl TableData {
         &self.headers
     }
 
+    pub fn get_max_row_index(&self) -> usize {
+        self.rows.len() - 1
+    }
+
+    pub fn get_max_col_index(&self) -> usize {
+        self.headers.len() - 1
+    }
+
     pub fn get_cell_value(&self, row: usize, col: usize) -> Result<&str> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;

@@ -39,7 +39,7 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::SelectTable => app.select_table(),
         Message::RemoveTable => app.remove_table(),
         // Message::SaveTable(table_name) => model.save_table(&table_name),
-        Message::SaveCellValue(value) => app.update_cell(&value),
+        Message::SaveCellValue(value) => app.update_cell_value(&value),
         Message::Exiting => app.set_exit(true),
         Message::CancelExit => app.set_exit(false),
         _ => bail!("Message handler not implemented"),

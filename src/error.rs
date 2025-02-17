@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum StrataError {
-    #[error("Invalid operation was called:  operation:[{operation:?}], state:[{state:?}]")]
-    InvalidOperationCall { operation: String, state: String },
+    #[error("Invalid operation was called:  operation:[{operation:?}], mode:[{mode:?}]")]
+    InvalidOperationCall { operation: String, mode: String },
 
     #[error("Table already exists: table_name:[{0}]")]
     TableNameDuplicate(String),
@@ -25,4 +25,7 @@ pub enum StrataError {
 
     #[error("Invalid column index: max:[{max}], requested:[{requested}]")]
     InvalidColumnIndex { max: usize, requested: usize },
+
+    #[error("No cell selected")]
+    NoCellSelected,
 }
