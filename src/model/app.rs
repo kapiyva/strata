@@ -198,39 +198,26 @@ impl App {
             bail!(StrataError::NoTableSelected);
         };
 
-        match &mut self.display_mode {
-            DisplayMode::SelectTable => {
-                *index = (*index + 1).min(self.table_list.len() - 1);
-                Ok(())
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "down table selector".to_string(),
-                mode: self.display_mode.to_string()
-            }),
-        }
+        *index = (*index + 1).min(self.table_list.len() - 1);
+        Ok(())
     }
 
     /// Call from SelectTable mode
     /// Move the table selector up
     pub fn up_table_selector(&mut self) -> Result<()> {
+        let DisplayMode::SelectTable = &self.display_mode else {
+            bail!(StrataError::InvalidOperationCall {
+                operation: "up table selector".to_string(),
+                mode: self.display_mode.to_string()
+            });
+        };
+
         let Some(index) = &mut self.table_selector_index else {
             bail!(StrataError::NoTableSelected);
         };
 
-        match &mut self.display_mode {
-            DisplayMode::SelectTable => {
-                if *index > 0 {
-                    *index -= 1;
-                } else {
-                    *index = 0;
-                }
-                Ok(())
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "up table selector".to_string(),
-                mode: self.display_mode.to_string()
-            }),
-        }
+        *index = (*index).saturating_sub(1);
+        Ok(())
     }
 
     /// Call from SelectTable mode
@@ -351,7 +338,7 @@ impl App {
     pub fn expand_row(&mut self) -> Result<()> {
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "jump cursor".to_string(),
+                operation: "expand row".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
@@ -364,7 +351,7 @@ impl App {
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "jump cursor".to_string(),
+                operation: "collapse row".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
@@ -372,10 +359,12 @@ impl App {
         self.get_table_data_mut()?.collapse_row(row)
     }
 
+    /// Call from SelectCell mode
+    /// Expand the column
     pub fn expand_col(&mut self) -> Result<()> {
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "jump cursor".to_string(),
+                operation: "expand col".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
@@ -386,11 +375,29 @@ impl App {
         table_data.expand_col(&header)
     }
 
+    /// Call from SelectCell mode
+    /// Collapse the column
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
+        let DisplayMode::SelectCell = &self.display_mode else {
+            bail!(StrataError::InvalidOperationCall {
+                operation: "collapse col".to_string(),
+                mode: self.display_mode.to_string()
+            });
+        };
+
         self.get_table_data_mut()?.collapse_col(col)
     }
 
+    /// Call from SelectCell mode
+    /// Update the header
     pub fn update_header(&mut self, value: &str) -> Result<()> {
+        let DisplayMode::SelectCell = &self.display_mode else {
+            bail!(StrataError::InvalidOperationCall {
+                operation: "update header".to_string(),
+                mode: self.display_mode.to_string()
+            });
+        };
+
         let (_, col) = self
             .cell_selector_index
             .ok_or_eyre(StrataError::NoCellSelected)?;

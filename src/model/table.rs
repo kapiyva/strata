@@ -37,7 +37,7 @@ pub struct TableData {
 impl TableData {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            headers: vec!["0".to_string()],
+            headers: vec!["header0".to_string()],
             rows: vec![vec!["".to_string()]],
         })
     }
