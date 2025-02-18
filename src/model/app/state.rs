@@ -3,6 +3,7 @@ pub enum DisplayMode {
     AddTable,
     SelectTable,
     SelectCell,
+    EditHeader,
     EditCell,
 }
 
@@ -18,6 +19,7 @@ impl ToString for DisplayMode {
             DisplayMode::AddTable => "AddTable".to_string(),
             DisplayMode::SelectTable => "SelectTable".to_string(),
             DisplayMode::SelectCell => "DisplayTable".to_string(),
+            DisplayMode::EditHeader => "EditHeader".to_string(),
             DisplayMode::EditCell => "EditCell".to_string(),
         }
     }

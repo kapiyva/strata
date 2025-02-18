@@ -16,13 +16,13 @@ pub struct App {
     table_list: Vec<TableName>,
     table_map: HashMap<TableName, TableData>,
     table_selector_index: Option<usize>,
-    // selected_cell: Option<SelectedCell>,
     cell_selector_index: Option<(usize, usize)>,
+    user_input: String,
     exiting: bool,
 }
 
 impl App {
-    /// Setup a new App as SelectTable state
+    /// Setup a new App as SelectTable mode
     pub fn new() -> Self {
         Self::default()
     }
@@ -34,6 +34,22 @@ impl App {
     pub fn set_exit(&mut self, exit: bool) -> Result<()> {
         self.exiting = exit;
         Ok(())
+    }
+
+    pub fn get_user_input(&self) -> &str {
+        &self.user_input
+    }
+
+    pub fn push_user_input(&mut self, c: char) {
+        self.user_input.push(c);
+    }
+
+    pub fn pop_user_input(&mut self) {
+        self.user_input.pop();
+    }
+
+    pub fn clear_user_input(&mut self) {
+        self.user_input.clear();
     }
 
     pub fn get_display_mode(&self) -> &DisplayMode {
@@ -62,24 +78,24 @@ impl App {
             .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
     }
 
-    /// Call from SelectTable state
-    /// Change the display state to AddTable state
-    pub fn set_state_add_table(&mut self) -> Result<()> {
+    /// Call from SelectTable mode
+    /// Change the display mode to AddTable mode
+    pub fn set_add_table_mode(&mut self) -> Result<()> {
         match &mut self.display_mode {
             DisplayMode::SelectTable => {
                 self.display_mode = DisplayMode::AddTable;
                 Ok(())
             }
             _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set state AddTable".to_string(),
+                operation: "set mode AddTable".to_string(),
                 mode: self.display_mode.to_string()
             }),
         }
     }
 
-    /// Call from AddTable or DisplayTable state
-    /// Change the display state to SelectTable
-    pub fn set_state_select_table(&mut self) -> Result<()> {
+    /// Call from AddTable or SelectCell mode
+    /// Change the display mode to SelectTable
+    pub fn set_select_table_mode(&mut self) -> Result<()> {
         match &mut self.display_mode {
             DisplayMode::AddTable | DisplayMode::SelectCell => {
                 self.display_mode = DisplayMode::SelectTable;
@@ -91,34 +107,48 @@ impl App {
                 Ok(())
             }
             _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set state SelectTable".to_string(),
+                operation: "set SelectTable mode".to_string(),
                 mode: self.display_mode.to_string()
             }),
         }
     }
 
-    // Call from EditCell state
-    // Cancel edit and change the display state to SelectCell
-    pub fn set_state_select_cell(&mut self) -> Result<()> {
+    // Call from EditCell mode
+    // Cancel edit and change the display mode to SelectCell
+    pub fn set_select_cell_mode(&mut self) -> Result<()> {
         match &mut self.display_mode {
             DisplayMode::EditCell => {
                 self.display_mode = DisplayMode::SelectCell;
                 Ok(())
             }
             _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set state SelectCell".to_string(),
+                operation: "set SelectCell mode".to_string(),
                 mode: self.display_mode.to_string()
             }),
         }
     }
 
-    /// Call from DisplayTable state
-    /// Change the display state to EditCell
-    pub fn set_state_edit_cell(&mut self) -> Result<()> {
-        // Only allow changing to EditCell state from DisplayTable state
+    /// Call from SelectCell mode
+    /// Change the display mode to EditHeader
+    pub fn set_edit_header_mode(&mut self) -> Result<()> {
+        match &mut self.display_mode {
+            DisplayMode::SelectCell => {
+                self.display_mode = DisplayMode::EditHeader;
+                Ok(())
+            }
+            _ => bail!(StrataError::InvalidOperationCall {
+                operation: "set EditHeader mode".to_string(),
+                mode: self.display_mode.to_string()
+            }),
+        }
+    }
+
+    /// Call from SelectCell mode
+    /// Change the display mode to EditCell
+    pub fn set_edit_cell_mode(&mut self) -> Result<()> {
         let DisplayMode::SelectCell = &mut self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "set state EditCell".to_string(),
+                operation: "set EditCell mode".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
@@ -128,10 +158,9 @@ impl App {
         Ok(())
     }
 
-    /// Call from AddTable state
-    /// Add new table and change to DisplayTable state
+    /// Call from AddTable mode
+    /// Add new table and change to SelectCell mode
     pub fn add_table(&mut self, table_name_str: &str) -> Result<()> {
-        // Only allow adding table in AddTable state
         let DisplayMode::AddTable = &mut self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "add table".to_string(),
@@ -152,9 +181,16 @@ impl App {
         Ok(())
     }
 
-    /// Call from SelectTable state
+    /// Call from SelectTable mode
     /// Move the table selector down
     pub fn down_table_selector(&mut self) -> Result<()> {
+        let DisplayMode::SelectTable = &self.display_mode else {
+            bail!(StrataError::InvalidOperationCall {
+                operation: "down table selector".to_string(),
+                mode: self.display_mode.to_string()
+            });
+        };
+
         if self.table_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
@@ -162,16 +198,9 @@ impl App {
             bail!(StrataError::NoTableSelected);
         };
 
-        // let new_index = *index + 1;
-
         match &mut self.display_mode {
             DisplayMode::SelectTable => {
                 *index = (*index + 1).min(self.table_list.len() - 1);
-                // if new_index < self.table_list.len() - 1 {
-                //     *index = new_index;
-                // } else {
-                //     *index = self.table_list.len() - 1;
-                // }
                 Ok(())
             }
             _ => bail!(StrataError::InvalidOperationCall {
@@ -181,7 +210,7 @@ impl App {
         }
     }
 
-    /// Call from SelectTable state
+    /// Call from SelectTable mode
     /// Move the table selector up
     pub fn up_table_selector(&mut self) -> Result<()> {
         let Some(index) = &mut self.table_selector_index else {
@@ -204,8 +233,8 @@ impl App {
         }
     }
 
-    /// Call from SelectTable state
-    /// Select table and change to DisplayTable state
+    /// Call from SelectTable mode
+    /// Select table and change to SelectCell mode
     pub fn select_table(&mut self) -> Result<()> {
         let DisplayMode::SelectTable = &mut self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
@@ -222,7 +251,7 @@ impl App {
         Ok(())
     }
 
-    /// Call from SelectTable state
+    /// Call from SelectTable mode
     /// Remove the selected table
     pub fn remove_table(&mut self) -> Result<()> {
         let DisplayMode::SelectTable = &mut self.display_mode else {
@@ -248,10 +277,9 @@ impl App {
         Ok(())
     }
 
-    /// Call from DisplayTable display state
+    /// Call from SelectCell display mode
     /// Move the cursor in the table
     pub fn move_cell_selector(&mut self, row_move: isize, col_move: isize) -> Result<()> {
-        // Only allow moving cursor in DisplayTable state
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "move cursor".to_string(),
@@ -300,10 +328,9 @@ impl App {
         Ok(())
     }
 
-    /// Call from DisplayTable state
+    /// Call from SelectCell mode
     /// Jump the cursor to the specified cell
     pub fn jump_cell_selector(&mut self, row: usize, col: usize) -> Result<()> {
-        // Only allow jumping cursor in DisplayTable state
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "jump cursor".to_string(),
@@ -319,57 +346,57 @@ impl App {
         Ok(())
     }
 
-    /// Call from DisplayTable state
+    /// Call from SelectCell mode
     /// Expand the row
     pub fn expand_row(&mut self) -> Result<()> {
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "expand row".to_string(),
+                operation: "jump cursor".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
 
-        let table_data = self.get_table_data_mut()?;
-
-        table_data.expand_row()
+        self.get_table_data_mut()?.expand_row()
     }
 
-    /// Call from DisplayTable display state
+    /// Call from SelectCell mode
     /// Collapse the row
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "collapse row".to_string(),
+                operation: "jump cursor".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
 
-        let table_data = self.get_table_data_mut()?;
-        table_data.collapse_row(row)
+        self.get_table_data_mut()?.collapse_row(row)
     }
 
-    pub fn expand_col(&mut self, col_name: &str) -> Result<()> {
+    pub fn expand_col(&mut self) -> Result<()> {
         let DisplayMode::SelectCell = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
-                operation: "expand col".to_string(),
+                operation: "jump cursor".to_string(),
                 mode: self.display_mode.to_string()
             });
         };
 
         let table_data = self.get_table_data_mut()?;
-        table_data.expand_col(col_name)
+        let header = format!("header{}", table_data.get_max_col_index());
+
+        table_data.expand_col(&header)
     }
 
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "collapse col".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
+        self.get_table_data_mut()?.collapse_col(col)
+    }
 
-        let table_data = self.get_table_data_mut()?;
-        table_data.collapse_col(col)
+    pub fn update_header(&mut self, value: &str) -> Result<()> {
+        let (_, col) = self
+            .cell_selector_index
+            .ok_or_eyre(StrataError::NoCellSelected)?;
+
+        self.display_mode = DisplayMode::SelectCell;
+        self.get_table_data_mut()?.update_header(col, value)
     }
 
     pub fn get_cell_value(&self) -> Result<&str> {
@@ -377,15 +404,7 @@ impl App {
             .cell_selector_index
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
-        match &self.display_mode {
-            DisplayMode::SelectCell | DisplayMode::EditCell => {
-                self.get_table_data()?.get_cell_value(row, col)
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "get cell value".to_string(),
-                mode: self.display_mode.to_string()
-            }),
-        }
+        self.get_table_data()?.get_cell_value(row, col)
     }
 
     pub fn update_cell_value(&mut self, value: &str) -> Result<()> {
@@ -466,10 +485,10 @@ mod tests {
     fn test_add_table() {
         let mut app = App::new();
         // add tables
-        app.set_state_add_table().unwrap();
+        app.set_add_table_mode().unwrap();
         app.add_table("table1").unwrap();
-        app.set_state_select_table().unwrap();
-        app.set_state_add_table().unwrap();
+        app.set_select_table_mode().unwrap();
+        app.set_add_table_mode().unwrap();
         app.add_table("table2").unwrap();
 
         assert_eq!(app.get_all_table_names().len(), 2);
