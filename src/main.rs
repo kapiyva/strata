@@ -113,6 +113,22 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                     DisplayMode::SelectCell => Message::EditHeaderMode,
                     _ => Message::NoOp,
                 },
+                KeyCode::Char('r') => match app.get_display_mode() {
+                    DisplayMode::SelectCell => Message::ExpandRow,
+                    _ => Message::NoOp,
+                },
+                KeyCode::Char('R') => match app.get_display_mode() {
+                    DisplayMode::SelectCell => Message::CollapseRow,
+                    _ => Message::NoOp,
+                },
+                KeyCode::Char('c') => match app.get_display_mode() {
+                    DisplayMode::SelectCell => Message::ExpandColumn,
+                    _ => Message::NoOp,
+                },
+                KeyCode::Char('C') => match app.get_display_mode() {
+                    DisplayMode::SelectCell => Message::CollapseColumn,
+                    _ => Message::NoOp,
+                },
                 // move cursor
                 KeyCode::Up => Message::Move(MoveDirection::Up),
                 KeyCode::Down => Message::Move(MoveDirection::Down),

@@ -1,6 +1,6 @@
 mod handler;
 
-use crate::model::app::App;
+use crate::{error::StrataError, model::app::App};
 use eyre::{bail, Result};
 use std::path::PathBuf;
 
@@ -18,6 +18,10 @@ pub enum Message {
     SelectTable,
     RemoveTable,
     SaveTable(String),
+    ExpandRow,
+    CollapseRow,
+    ExpandColumn,
+    CollapseColumn,
     SaveHeader(String),
     SaveCellValue(String),
     Exiting,
@@ -44,6 +48,20 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::SelectTable => app.select_table(),
         Message::RemoveTable => app.remove_table(),
         // Message::SaveTable(table_name) => model.save_table(&table_name),
+        Message::ExpandRow => app.expand_row(),
+        Message::CollapseRow => {
+            let Some((row, _)) = app.get_selected_cell() else {
+                bail!(StrataError::NoCellSelected);
+            };
+            app.collapse_row(row)
+        }
+        Message::ExpandColumn => app.expand_col(),
+        Message::CollapseColumn => {
+            let Some((_, col)) = app.get_selected_cell() else {
+                bail!(StrataError::NoCellSelected);
+            };
+            app.collapse_col(col)
+        }
         Message::SaveHeader(header) => app.update_header(&header),
         Message::SaveCellValue(value) => app.update_cell_value(&value),
         Message::Exiting => app.set_exit(true),
