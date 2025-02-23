@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
+use ratatui::widgets::TableState;
 use state::*;
 
 use crate::error::StrataError;
@@ -15,8 +16,8 @@ pub struct App {
     display_mode: DisplayMode,
     table_list: Vec<TableName>,
     table_map: HashMap<TableName, TableData>,
-    table_selector_index: Option<usize>,
-    cell_selector_index: Option<(usize, usize)>,
+    table_selector: Option<usize>,
+    cell_selector: TableState,
     user_input: String,
     exiting: bool,
 }
@@ -61,11 +62,11 @@ impl App {
     }
 
     pub fn get_selected_table_name(&self) -> Option<&TableName> {
-        self.table_list.get(self.table_selector_index?)
+        self.table_list.get(self.table_selector?)
     }
 
-    pub fn get_selected_cell(&self) -> Option<(usize, usize)> {
-        self.cell_selector_index
+    pub fn get_table_state(&self) -> &TableState {
+        &self.cell_selector
     }
 
     pub fn get_table_data(&self) -> Result<&TableData> {
@@ -76,6 +77,10 @@ impl App {
         self.table_map
             .get(table_name)
             .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
+    }
+
+    pub fn get_selected_cell(&self) -> Option<(usize, usize)> {
+        self.cell_selector.selected_cell()
     }
 
     /// Call from SelectTable mode
@@ -100,9 +105,9 @@ impl App {
             DisplayMode::AddTable | DisplayMode::SelectCell => {
                 self.display_mode = DisplayMode::SelectTable;
                 if self.table_list.is_empty() {
-                    self.table_selector_index = None;
-                } else if self.table_selector_index.is_none() {
-                    self.table_selector_index = Some(0);
+                    self.table_selector = None;
+                } else if self.table_selector.is_none() {
+                    self.table_selector = Some(0);
                 }
                 Ok(())
             }
@@ -176,8 +181,8 @@ impl App {
         self.table_map.insert(table_name.clone(), TableData::new()?);
         self.table_list.push(table_name.clone());
         self.display_mode = DisplayMode::SelectCell;
-        self.table_selector_index = Some(self.table_list.len() - 1);
-        self.cell_selector_index = Some((0, 0));
+        self.table_selector = Some(self.table_list.len() - 1);
+        self.cell_selector = TableState::default();
         Ok(())
     }
 
@@ -194,7 +199,7 @@ impl App {
         if self.table_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
-        let Some(index) = &mut self.table_selector_index else {
+        let Some(index) = &mut self.table_selector else {
             bail!(StrataError::NoTableSelected);
         };
 
@@ -212,7 +217,7 @@ impl App {
             });
         };
 
-        let Some(index) = &mut self.table_selector_index else {
+        let Some(index) = &mut self.table_selector else {
             bail!(StrataError::NoTableSelected);
         };
 
@@ -234,7 +239,7 @@ impl App {
         }
 
         self.display_mode = DisplayMode::SelectCell;
-        self.cell_selector_index = Some((0, 0));
+        self.cell_selector = TableState::default();
         Ok(())
     }
 
@@ -259,8 +264,8 @@ impl App {
         self.table_map.remove(&target_table_name);
         self.table_list.retain(|tn| tn != &target_table_name);
         self.display_mode = DisplayMode::SelectTable;
-        self.table_selector_index = Some(0);
-        self.cell_selector_index = None;
+        self.table_selector = Some(0);
+        self.cell_selector.select_cell(None);
         Ok(())
     }
 
@@ -274,9 +279,6 @@ impl App {
             });
         };
 
-        let (selected_row, selected_col) = self
-            .cell_selector_index
-            .ok_or_eyre(StrataError::NoCellSelected)?;
         let (max_row, max_col) = {
             let table_data = self.get_table_data()?;
             (
@@ -284,6 +286,11 @@ impl App {
                 table_data.get_max_col_index(),
             )
         };
+        let (selected_row, selected_col) = self
+            .cell_selector
+            .selected_cell()
+            .ok_or_eyre(StrataError::NoCellSelected)?;
+
         let new_row = match row_move {
             0 => selected_row,
             _ if row_move < 0 => {
@@ -311,7 +318,7 @@ impl App {
             _ => unreachable!(),
         };
 
-        self.cell_selector_index = Some((new_row, new_col));
+        self.cell_selector.select_cell(Some((new_row, new_col)));
         Ok(())
     }
 
@@ -329,7 +336,7 @@ impl App {
         table_data.is_valid_row_index(row)?;
         table_data.is_valid_col_index(col)?;
 
-        self.cell_selector_index = Some((row, col));
+        self.cell_selector.select_cell(Some((row.clone(), col)));
         Ok(())
     }
 
@@ -399,7 +406,8 @@ impl App {
         };
 
         let (_, col) = self
-            .cell_selector_index
+            .cell_selector
+            .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.display_mode = DisplayMode::SelectCell;
@@ -408,7 +416,8 @@ impl App {
 
     pub fn get_cell_value(&self) -> Result<&str> {
         let (row, col) = self
-            .cell_selector_index
+            .cell_selector
+            .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.get_table_data()?.get_cell_value(row, col)
@@ -416,7 +425,8 @@ impl App {
 
     pub fn update_cell_value(&mut self, value: &str) -> Result<()> {
         let (row, col) = self
-            .cell_selector_index
+            .cell_selector
+            .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.display_mode = DisplayMode::SelectCell;
@@ -457,8 +467,8 @@ mod tests {
         app.table_map
             .insert(table_name_1.clone(), table_data.clone());
         app.table_map.insert(table_name_2.clone(), table_data);
-        app.table_selector_index = Some(0);
-        app.cell_selector_index = None;
+        app.table_selector = Some(0);
+        app.cell_selector.select_cell(None);
 
         app
     }
@@ -482,8 +492,13 @@ mod tests {
         app.table_map
             .insert(table_name_1.clone(), table_data.clone());
         app.table_map.insert(table_name_2.clone(), table_data);
-        app.table_selector_index = Some(0);
-        app.cell_selector_index = Some((0, 0));
+        app.table_selector = Some(0);
+        app.cell_selector = {
+            let mut ts = TableState::default();
+            ts.select_cell(Some((0, 0)));
+
+            ts
+        };
 
         app
     }
@@ -535,17 +550,17 @@ mod tests {
 
         // check down table selector
         app.down_table_selector().unwrap();
-        assert_eq!(app.table_selector_index, Some(1),);
+        assert_eq!(app.table_selector, Some(1),);
         // check out of bound
         app.down_table_selector().unwrap();
-        assert_eq!(app.table_selector_index, Some(1),);
+        assert_eq!(app.table_selector, Some(1),);
 
         // check up table selector
         app.up_table_selector().unwrap();
-        assert_eq!(app.table_selector_index, Some(0),);
+        assert_eq!(app.table_selector, Some(0),);
         // check out of bound
         app.up_table_selector().unwrap();
-        assert_eq!(app.table_selector_index, Some(0),);
+        assert_eq!(app.table_selector, Some(0),);
     }
 
     #[test]
@@ -556,52 +571,52 @@ mod tests {
         // (1,0)
         app.move_cell_selector(1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
         // check out of bound
         app.move_cell_selector(1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
 
         // (1,1)
         app.move_cell_selector(0, 1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-1");
         // check out of bound
         app.move_cell_selector(0, 1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-1");
 
         // (0,1)
         app.move_cell_selector(-1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
         // check out of bound
         app.move_cell_selector(-1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
 
         // (0,0)
         app.move_cell_selector(0, -1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-0");
         // check out of bound
         app.move_cell_selector(0, -1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_selected_cell()
+            app.get_table_state().selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-0");
     }

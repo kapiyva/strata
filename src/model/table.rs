@@ -27,6 +27,8 @@ impl TableName {
     }
 }
 
+const INITIAL_HEADER: &str = "header0";
+
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct TableData {
@@ -37,7 +39,7 @@ pub struct TableData {
 impl TableData {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            headers: vec!["header0".to_string()],
+            headers: vec![INITIAL_HEADER.to_string()],
             rows: vec![vec!["".to_string()]],
         })
     }
@@ -161,7 +163,7 @@ mod tests {
     fn test_new_table() {
         let table_data = TableData::new().unwrap();
         assert_eq!(table_data.headers.len(), 1);
-        assert_eq!(table_data.headers[0], "0");
+        assert_eq!(table_data.headers[0], INITIAL_HEADER);
         assert_eq!(table_data.rows.len(), 1);
     }
 
