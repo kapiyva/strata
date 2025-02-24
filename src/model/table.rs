@@ -27,7 +27,7 @@ impl TableName {
     }
 }
 
-const INITIAL_HEADER: &str = "header0";
+const INITIAL_SIZE: usize = 10;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, PartialEq))]
@@ -36,11 +36,22 @@ pub struct TableData {
     pub rows: Vec<Vec<String>>,
 }
 
+impl Default for TableData {
+    fn default() -> Self {
+        Self {
+            headers: vec!["header0".to_string()],
+            rows: vec![vec!["".to_string(); 1]],
+        }
+    }
+}
+
 impl TableData {
     pub fn new() -> Result<Self> {
         Ok(Self {
-            headers: vec![INITIAL_HEADER.to_string()],
-            rows: vec![vec!["".to_string()]],
+            headers: (0..(INITIAL_SIZE))
+                .map(|i| format!("header{}", i))
+                .collect(),
+            rows: vec![vec!["".to_string(); INITIAL_SIZE]; INITIAL_SIZE],
         })
     }
 
@@ -162,9 +173,10 @@ mod tests {
     #[test]
     fn test_new_table() {
         let table_data = TableData::new().unwrap();
-        assert_eq!(table_data.headers.len(), 1);
-        assert_eq!(table_data.headers[0], INITIAL_HEADER);
-        assert_eq!(table_data.rows.len(), 1);
+        assert_eq!(table_data.headers.len(), INITIAL_SIZE);
+        assert_eq!(table_data.headers[0], "header0");
+        assert_eq!(table_data.headers[9], "header9");
+        assert_eq!(table_data.rows.len(), INITIAL_SIZE);
     }
 
     #[test]

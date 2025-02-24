@@ -17,7 +17,7 @@ pub struct App {
     table_list: Vec<TableName>,
     table_map: HashMap<TableName, TableData>,
     table_selector: Option<usize>,
-    cell_selector: TableState,
+    table_state: TableState,
     user_input: String,
     exiting: bool,
 }
@@ -32,9 +32,34 @@ impl App {
         self.exiting
     }
 
-    pub fn set_exit(&mut self, exit: bool) -> Result<()> {
-        self.exiting = exit;
-        Ok(())
+    pub fn get_display_mode(&self) -> &DisplayMode {
+        &self.display_mode
+    }
+
+    pub fn get_table_list(&self) -> &Vec<TableName> {
+        &self.table_list
+    }
+
+    pub fn get_selected_table_name(&self) -> Option<&TableName> {
+        self.table_list.get(self.table_selector?)
+    }
+
+    pub fn get_table_data(&self) -> Result<&TableData> {
+        let table_name = self
+            .get_selected_table_name()
+            .ok_or_eyre(StrataError::NoTableSelected)?;
+
+        self.table_map
+            .get(table_name)
+            .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
+    }
+
+    pub fn get_table_state(&self) -> &TableState {
+        &self.table_state
+    }
+
+    pub fn get_selected_cell(&self) -> Option<(usize, usize)> {
+        self.table_state.selected_cell()
     }
 
     pub fn get_user_input(&self) -> &str {
@@ -53,34 +78,9 @@ impl App {
         self.user_input.clear();
     }
 
-    pub fn get_display_mode(&self) -> &DisplayMode {
-        &self.display_mode
-    }
-
-    pub fn get_all_table_names(&self) -> &Vec<TableName> {
-        &self.table_list
-    }
-
-    pub fn get_selected_table_name(&self) -> Option<&TableName> {
-        self.table_list.get(self.table_selector?)
-    }
-
-    pub fn get_table_state(&self) -> &TableState {
-        &self.cell_selector
-    }
-
-    pub fn get_table_data(&self) -> Result<&TableData> {
-        let table_name = self
-            .get_selected_table_name()
-            .ok_or_eyre(StrataError::NoTableSelected)?;
-
-        self.table_map
-            .get(table_name)
-            .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
-    }
-
-    pub fn get_selected_cell(&self) -> Option<(usize, usize)> {
-        self.cell_selector.selected_cell()
+    pub fn set_exit(&mut self, exit: bool) -> Result<()> {
+        self.exiting = exit;
+        Ok(())
     }
 
     /// Call from SelectTable mode
@@ -159,6 +159,7 @@ impl App {
         };
 
         self.display_mode = DisplayMode::EditCell;
+        self.user_input = self.get_cell_value()?.to_string();
 
         Ok(())
     }
@@ -182,7 +183,7 @@ impl App {
         self.table_list.push(table_name.clone());
         self.display_mode = DisplayMode::SelectCell;
         self.table_selector = Some(self.table_list.len() - 1);
-        self.cell_selector = TableState::default();
+        self.table_state = TableState::default().with_selected_cell(Some((0, 0)));
         Ok(())
     }
 
@@ -239,7 +240,9 @@ impl App {
         }
 
         self.display_mode = DisplayMode::SelectCell;
-        self.cell_selector = TableState::default();
+        self.table_state = TableState::default();
+        self.table_state.select_cell(Some((0, 0)));
+        println!("{:?}", self.get_selected_cell());
         Ok(())
     }
 
@@ -265,7 +268,7 @@ impl App {
         self.table_list.retain(|tn| tn != &target_table_name);
         self.display_mode = DisplayMode::SelectTable;
         self.table_selector = Some(0);
-        self.cell_selector.select_cell(None);
+        self.table_state.select_cell(None);
         Ok(())
     }
 
@@ -287,7 +290,7 @@ impl App {
             )
         };
         let (selected_row, selected_col) = self
-            .cell_selector
+            .table_state
             .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
@@ -318,7 +321,7 @@ impl App {
             _ => unreachable!(),
         };
 
-        self.cell_selector.select_cell(Some((new_row, new_col)));
+        self.table_state.select_cell(Some((new_row, new_col)));
         Ok(())
     }
 
@@ -336,7 +339,7 @@ impl App {
         table_data.is_valid_row_index(row)?;
         table_data.is_valid_col_index(col)?;
 
-        self.cell_selector.select_cell(Some((row.clone(), col)));
+        self.table_state.select_cell(Some((row.clone(), col)));
         Ok(())
     }
 
@@ -377,7 +380,7 @@ impl App {
         };
 
         let table_data = self.get_table_data_mut()?;
-        let header = format!("header{}", table_data.get_max_col_index());
+        let header = format!("header{}", table_data.get_max_col_index() + 1);
 
         table_data.expand_col(&header)
     }
@@ -398,7 +401,7 @@ impl App {
     /// Call from SelectCell mode
     /// Update the header
     pub fn update_header(&mut self, value: &str) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
+        let DisplayMode::EditHeader = &self.display_mode else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "update header".to_string(),
                 mode: self.display_mode.to_string()
@@ -406,7 +409,7 @@ impl App {
         };
 
         let (_, col) = self
-            .cell_selector
+            .table_state
             .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
@@ -416,7 +419,7 @@ impl App {
 
     pub fn get_cell_value(&self) -> Result<&str> {
         let (row, col) = self
-            .cell_selector
+            .table_state
             .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
@@ -425,7 +428,7 @@ impl App {
 
     pub fn update_cell_value(&mut self, value: &str) -> Result<()> {
         let (row, col) = self
-            .cell_selector
+            .table_state
             .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
@@ -454,9 +457,9 @@ mod tests {
         let table_name_1 = TableName::from("table1").unwrap();
         let table_name_2 = TableName::from("table2").unwrap();
         // create 2x2 table
-        let mut table_data = TableData::new().unwrap();
+        let mut table_data = TableData::default();
         table_data.expand_row().unwrap();
-        table_data.expand_col("header").unwrap();
+        table_data.expand_col("header1").unwrap();
         table_data.update_cell(0, 0, "value0-0").unwrap();
         table_data.update_cell(1, 0, "value1-0").unwrap();
         table_data.update_cell(0, 1, "value0-1").unwrap();
@@ -468,7 +471,7 @@ mod tests {
             .insert(table_name_1.clone(), table_data.clone());
         app.table_map.insert(table_name_2.clone(), table_data);
         app.table_selector = Some(0);
-        app.cell_selector.select_cell(None);
+        app.table_state.select_cell(None);
 
         app
     }
@@ -479,9 +482,9 @@ mod tests {
         let table_name_1 = TableName::from("table1").unwrap();
         let table_name_2 = TableName::from("table2").unwrap();
         // create 2x2 table
-        let mut table_data = TableData::new().unwrap();
+        let mut table_data = TableData::default();
         table_data.expand_row().unwrap();
-        table_data.expand_col("header").unwrap();
+        table_data.expand_col("header1").unwrap();
         table_data.update_cell(0, 0, "value0-0").unwrap();
         table_data.update_cell(1, 0, "value1-0").unwrap();
         table_data.update_cell(0, 1, "value0-1").unwrap();
@@ -493,10 +496,9 @@ mod tests {
             .insert(table_name_1.clone(), table_data.clone());
         app.table_map.insert(table_name_2.clone(), table_data);
         app.table_selector = Some(0);
-        app.cell_selector = {
+        app.table_state = {
             let mut ts = TableState::default();
             ts.select_cell(Some((0, 0)));
-
             ts
         };
 
@@ -513,12 +515,12 @@ mod tests {
         app.set_add_table_mode().unwrap();
         app.add_table("table2").unwrap();
 
-        assert_eq!(app.get_all_table_names().len(), 2);
+        assert_eq!(app.get_table_list().len(), 2);
         assert!(app
-            .get_all_table_names()
+            .get_table_list()
             .contains(&&TableName::from("table1").unwrap()));
         assert!(app
-            .get_all_table_names()
+            .get_table_list()
             .contains(&&TableName::from("table2").unwrap()));
     }
 
@@ -527,9 +529,9 @@ mod tests {
         let mut app = setup_select_table_app();
 
         app.remove_table().unwrap();
-        assert_eq!(app.get_all_table_names().len(), 1);
+        assert_eq!(app.get_table_list().len(), 1);
         assert!(app
-            .get_all_table_names()
+            .get_table_list()
             .contains(&&TableName::from("table2").unwrap()));
     }
 
@@ -631,7 +633,7 @@ mod tests {
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
         // check jump to out of bound
         if let Ok(_) = app.jump_cell_selector(2, 1) {
-            panic!("jump_cursor should fail");
+            panic!("jump_cursor should fail cell_selector",);
         }
         if let Ok(_) = app.jump_cell_selector(1, 2) {
             panic!("jump_cursor should fail");

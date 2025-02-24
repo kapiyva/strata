@@ -25,8 +25,6 @@ fn main() -> Result<()> {
     let mut terminal = Terminal::new(backend)?;
 
     let mut app = App::new();
-    app.set_add_table_mode()?;
-    app.add_table("Table 1")?;
     let _ = run_app(&mut terminal, &mut app);
 
     disable_raw_mode()?;
@@ -43,14 +41,20 @@ fn main() -> Result<()> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
     terminal.clear()?;
     loop {
-        terminal.draw(|f| ui(f, app))?;
+        // TODO: handle error
+        if let Err(e) = terminal.draw(|f| ui(f, app)) {
+            eprintln!("{}", e);
+        }
         // handle key event
         if let Event::Key(key) = event::read()? {
             let message = handle_key_event(key, app);
             if let Message::Exit = message {
                 break;
             }
-            update(app, message)?;
+            // TODO: handle error
+            if let Err(e) = update(app, message) {
+                eprintln!("{}", e);
+            }
         }
     }
 
