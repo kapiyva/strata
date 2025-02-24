@@ -72,10 +72,10 @@ mod handler {
                 _ => Ok(()),
             },
             DisplayMode::SelectCell => match direction {
-                MoveDirection::Up => model.move_cell_selector(0, -1),
-                MoveDirection::Down => model.move_cell_selector(0, 1),
-                MoveDirection::Left => model.move_cell_selector(-1, 0),
-                MoveDirection::Right => model.move_cell_selector(1, 0),
+                MoveDirection::Up => model.move_cell_selector(-1, 0),
+                MoveDirection::Down => model.move_cell_selector(1, 0),
+                MoveDirection::Left => model.move_cell_selector(0, -1),
+                MoveDirection::Right => model.move_cell_selector(0, 1),
             },
             _ => Ok(()),
         }
