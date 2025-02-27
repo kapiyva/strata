@@ -52,7 +52,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         frame,
         footer_area,
         RenderFooterProps {
-            display_mode: app.get_display_focus(),
+            display_focus: app.get_display_focus(),
         },
     );
     match app.get_display_focus() {
