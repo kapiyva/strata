@@ -1,40 +1,73 @@
+mod component;
+mod render_error;
+mod render_exit;
 mod render_footer;
 mod render_input;
 mod render_table;
 mod render_table_list;
-mod widget;
 
 use ratatui::{
     layout::{Constraint, Layout},
     Frame,
 };
-use render_footer::render_footer;
-use render_input::render_input;
-use render_table::render_table;
-use render_table_list::render_table_list;
+use render_error::render_error;
+use render_exit::render_exit;
+use render_footer::{render_footer, RenderFooterProps};
+use render_input::render_command_box;
+use render_table::{render_table, RenderTableProps};
+use render_table_list::{render_table_list, RenderTableListProps};
 
-use crate::model::app::{state::DisplayMode, App};
+use crate::model::app::{state::DisplayFocus, App};
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
+    // layout
     let [main_area, footer_area] =
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(frame.area());
     let [table_list_area, table_area] =
         Layout::horizontal([Constraint::Percentage(20), Constraint::Min(0)])
             .margin(1)
             .areas(main_area);
-
-    render_table_list(frame, table_list_area, app);
-    let _ = render_table(frame, table_area, app);
-    let _ = render_footer(frame, footer_area, app);
-    match app.get_display_mode() {
-        DisplayMode::AddTable => {
-            render_input(frame, app.get_user_input(), "Table Name");
+    //render
+    render_table_list(
+        frame,
+        table_list_area,
+        RenderTableListProps {
+            table_list: app.get_table_name_list(),
+            selected_index: app.get_table_selector(),
+            focused: *app.get_display_focus() == DisplayFocus::TableList,
+        },
+    );
+    if let Ok(table) = app.get_selected_table_data() {
+        render_table(
+            frame,
+            table_area,
+            RenderTableProps {
+                table,
+                widget_state: app.get_table_state(),
+                focused: *app.get_display_focus() == DisplayFocus::TableView,
+            },
+        );
+    };
+    render_footer(
+        frame,
+        footer_area,
+        RenderFooterProps {
+            display_mode: app.get_display_focus(),
+        },
+    );
+    match app.get_display_focus() {
+        DisplayFocus::Command(_) => {
+            render_command_box(
+                frame,
+                app.get_user_input(),
+                app.get_command_name().unwrap_or("Command"),
+            );
         }
-        DisplayMode::EditHeader => {
-            render_input(frame, app.get_user_input(), "Header Name");
+        DisplayFocus::Error(_) => {
+            render_error(frame, app.get_error_message());
         }
-        DisplayMode::EditCell => {
-            render_input(frame, app.get_user_input(), "Cell Value");
+        DisplayFocus::Exit(_) => {
+            render_exit(frame);
         }
         _ => {}
     }

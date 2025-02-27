@@ -12,7 +12,7 @@ use ratatui::{
 };
 use strata::{
     message::{Message, MoveDirection},
-    model::app::{state::DisplayMode, App},
+    model::app::{state::DisplayFocus, App},
     ui::ui,
     update::update,
 };
@@ -41,9 +41,9 @@ fn main() -> Result<()> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
     terminal.clear()?;
     loop {
-        // TODO: handle error
         if let Err(e) = terminal.draw(|f| ui(f, app)) {
-            eprintln!("{}", e);
+            app.push_error_message(e.to_string());
+            app.focus_error();
         }
         // handle key event
         if let Event::Key(key) = event::read()? {
@@ -51,9 +51,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
             if let Message::Exit = message {
                 break;
             }
-            // TODO: handle error
             if let Err(e) = update(app, message) {
-                eprintln!("{}", e);
+                app.push_error_message(e.to_string());
+                app.focus_error();
             }
         }
     }
@@ -63,98 +63,75 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
 
 fn handle_key_event(key: KeyEvent, app: &App) -> Message {
     match key.code {
-        KeyCode::Char(c)
-            if (*app.get_display_mode() == DisplayMode::EditCell
-                || *app.get_display_mode() == DisplayMode::AddTable
-                || *app.get_display_mode() == DisplayMode::EditHeader) =>
-        {
+        // input charactor
+        KeyCode::Char(c) if matches!(app.get_display_focus(), DisplayFocus::Command(_)) => {
             Message::Input(c)
         }
-        KeyCode::Char('q') => match app.get_exit() {
-            true => Message::Exit,
-            false => Message::Exiting,
-        },
-        KeyCode::Esc => match app.get_display_mode() {
-            DisplayMode::AddTable => Message::SelectTableMode,
-            DisplayMode::SelectCell => Message::SelectTableMode,
-            DisplayMode::EditCell => Message::SelectCellMode,
+        // special key
+        KeyCode::Esc => Message::Cancel,
+        KeyCode::Enter => {
+            if let DisplayFocus::Exit(_) = app.get_display_focus() {
+                return Message::Exit;
+            }
+            Message::Enter
+        }
+        KeyCode::Backspace => Message::BackSpace,
+        // others
+        KeyCode::Char('q') => {
+            if let DisplayFocus::Exit(_) = app.get_display_focus() {
+                return Message::Exit;
+            }
+            Message::Exiting
+        }
+        KeyCode::Char('a') => Message::Add,
+        KeyCode::Char('d') => Message::Delete,
+        KeyCode::Char('e') => Message::Edit,
+        KeyCode::Char('E') => Message::HyperEdit,
+        KeyCode::Char('r') => match app.get_display_focus() {
+            DisplayFocus::TableView => Message::ExpandRow,
             _ => Message::NoOp,
         },
-        KeyCode::Enter => match app.get_display_mode() {
-            DisplayMode::AddTable => Message::NewTable(app.get_user_input().to_string()),
-            DisplayMode::SelectTable => Message::SelectTable,
-            DisplayMode::SelectCell => Message::EditCellMode,
-            DisplayMode::EditHeader => Message::SaveHeader(app.get_user_input().to_string()),
-            DisplayMode::EditCell => Message::SaveCellValue(app.get_user_input().to_string()),
-        },
-        KeyCode::Char('a') => match app.get_display_mode() {
-            DisplayMode::SelectTable => Message::AddTableMode,
+        KeyCode::Char('R') => match app.get_display_focus() {
+            DisplayFocus::TableView => Message::CollapseRow,
             _ => Message::NoOp,
         },
-        KeyCode::Char('d') => match app.get_display_mode() {
-            DisplayMode::SelectTable => Message::RemoveTable,
-            DisplayMode::SelectCell => Message::SaveCellValue("".to_string()),
-            _ => unreachable!(),
-        },
-        KeyCode::Char('e') => match app.get_display_mode() {
-            DisplayMode::SelectCell => Message::EditCellMode,
+        KeyCode::Char('c') => match app.get_display_focus() {
+            DisplayFocus::TableView => Message::ExpandColumn,
             _ => Message::NoOp,
         },
-        KeyCode::Char('H') => match app.get_display_mode() {
-            DisplayMode::SelectCell => Message::EditHeaderMode,
-            _ => Message::NoOp,
-        },
-        KeyCode::Char('r') => match app.get_display_mode() {
-            DisplayMode::SelectCell => Message::ExpandRow,
-            _ => Message::NoOp,
-        },
-        KeyCode::Char('R') => match app.get_display_mode() {
-            DisplayMode::SelectCell => Message::CollapseRow,
-            _ => Message::NoOp,
-        },
-        KeyCode::Char('c') => match app.get_display_mode() {
-            DisplayMode::SelectCell => Message::ExpandColumn,
-            _ => Message::NoOp,
-        },
-        KeyCode::Char('C') => match app.get_display_mode() {
-            DisplayMode::SelectCell => Message::CollapseColumn,
+        KeyCode::Char('C') => match app.get_display_focus() {
+            DisplayFocus::TableView => Message::CollapseColumn,
             _ => Message::NoOp,
         },
         // move cursor
         KeyCode::Up => Message::Move(MoveDirection::Up),
         KeyCode::Down => Message::Move(MoveDirection::Down),
-        KeyCode::Left => Message::Move(MoveDirection::Left),
         KeyCode::Right => Message::Move(MoveDirection::Right),
-        KeyCode::Tab if *app.get_display_mode() == DisplayMode::SelectCell => {
+        KeyCode::Left => Message::Move(MoveDirection::Left),
+        KeyCode::Tab if *app.get_display_focus() == DisplayFocus::TableView => {
             Message::Move(MoveDirection::Right)
         }
+        KeyCode::Char('J') => Message::Jump,
 
         // vim keybindings
-        KeyCode::Char('h') if *app.get_display_mode() == DisplayMode::SelectCell => {
+        KeyCode::Char('h') if *app.get_display_focus() == DisplayFocus::TableView => {
             Message::Move(MoveDirection::Left)
         }
         KeyCode::Char('j')
-            if *app.get_display_mode() == DisplayMode::SelectCell
-                || *app.get_display_mode() == DisplayMode::SelectTable =>
+            if *app.get_display_focus() == DisplayFocus::TableView
+                || *app.get_display_focus() == DisplayFocus::TableList =>
         {
             Message::Move(MoveDirection::Down)
         }
         KeyCode::Char('k')
-            if *app.get_display_mode() == DisplayMode::SelectCell
-                || *app.get_display_mode() == DisplayMode::SelectTable =>
+            if *app.get_display_focus() == DisplayFocus::TableView
+                || *app.get_display_focus() == DisplayFocus::TableList =>
         {
             Message::Move(MoveDirection::Up)
         }
-        KeyCode::Char('l') if *app.get_display_mode() == DisplayMode::SelectCell => {
+        KeyCode::Char('l') if *app.get_display_focus() == DisplayFocus::TableView => {
             Message::Move(MoveDirection::Right)
         }
-
-        KeyCode::Backspace => {
-            // app.pop_user_input();
-            // continue;
-            Message::PopInput
-        }
-
         _ => Message::NoOp,
     }
 }

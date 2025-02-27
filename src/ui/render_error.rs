@@ -6,16 +6,16 @@ use ratatui::{
 
 use super::component::popup::Popup;
 
-pub(crate) fn render_command_box(frame: &mut Frame, input: &str, title: &str) {
+pub(crate) fn render_error(frame: &mut Frame, error_message: &Vec<String>) {
     let popup_area = Rect {
         x: frame.area().width / 4,
         y: frame.area().height / 3,
         width: frame.area().width / 2,
-        height: 3,
+        height: error_message.len() as u16 + 6,
     };
     let popup = Popup {
-        title: title.into(),
-        content: input.into(),
+        title: "Error".into(),
+        content: error_message.join("\n").into(),
         style: Style::default(),
         title_style: Style::new().white().bold(),
         border_style: Style::default(),

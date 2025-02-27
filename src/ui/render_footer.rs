@@ -1,32 +1,18 @@
-use eyre::Result;
-use ratatui::{layout::Rect, text::Line, Frame};
+use ratatui::{
+    layout::Rect,
+    style::{Color, Style},
+    text::Line,
+    Frame,
+};
 
-use crate::model::app::App;
+use crate::model::app::state::DisplayFocus;
 
-// enum OperationGuide {
-//     AddTable,
-//     SelectTable,
-//     SelectCell,
-//     EditHeader,
-//     EditCell,
-// }
+pub struct RenderFooterProps<'a> {
+    pub display_mode: &'a DisplayFocus,
+}
 
-pub(super) fn render_footer(frame: &mut Frame, area: Rect, app: &App) -> Result<()> {
-    // let operation_guide = match app.get_display_mode() {
-    //     DisplayMode::AddTable => OperationGuide::AddTable,
-    //     DisplayMode::SelectTable => OperationGuide::SelectTable,
-    //     DisplayMode::SelectCell => OperationGuide::SelectCell,
-    //     DisplayMode::EditHeader => OperationGuide::EditHeader,
-    //     DisplayMode::EditCell => OperationGuide::EditCell,
-    // };
-    // let footer = Line::from(app.get_display_mode().to_string());
-    let footer = Line::from(format!(
-        "{:?}, {:?}, {:?}, {:?}",
-        app.get_display_mode(),
-        app.get_selected_table_name(),
-        app.get_selected_cell(),
-        app.get_table_state()
-    ));
+pub(super) fn render_footer(frame: &mut Frame, area: Rect, props: RenderFooterProps) {
+    let footer = Line::from(format!("{}", props.display_mode.get_guide()))
+        .style(Style::default().fg(Color::LightCyan));
     frame.render_widget(footer, area);
-    Ok(())
 }

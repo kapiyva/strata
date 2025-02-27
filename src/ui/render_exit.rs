@@ -6,7 +6,7 @@ use ratatui::{
 
 use super::component::popup::Popup;
 
-pub(crate) fn render_command_box(frame: &mut Frame, input: &str, title: &str) {
+pub(crate) fn render_exit(frame: &mut Frame) {
     let popup_area = Rect {
         x: frame.area().width / 4,
         y: frame.area().height / 3,
@@ -14,8 +14,8 @@ pub(crate) fn render_command_box(frame: &mut Frame, input: &str, title: &str) {
         height: 3,
     };
     let popup = Popup {
-        title: title.into(),
-        content: input.into(),
+        title: "Exit".into(),
+        content: "Close this App?".into(),
         style: Style::default(),
         title_style: Style::new().white().bold(),
         border_style: Style::default(),

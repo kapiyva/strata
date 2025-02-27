@@ -1,18 +1,25 @@
-use eyre::Result;
 use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Style, Stylize},
-    widgets::{Block, Borders, Cell, Row, Table},
+    widgets::{Block, Borders, Cell, Row, Table, TableState},
     Frame,
 };
 
-use crate::model::{app::App, table::TableData};
+use crate::model::table::TableData;
 
-pub(super) fn render_table(frame: &mut Frame, area: Rect, app: &App) -> Result<()> {
-    let table = app.get_table_data()?;
+pub struct RenderTableProps<'a> {
+    pub table: &'a TableData,
+    pub widget_state: &'a TableState,
+    pub focused: bool,
+}
+
+pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProps) {
+    let table = props.table;
+    let selected_row = props.widget_state.selected();
+    let selected_col = props.widget_state.selected_column();
 
     let header_style = |col: usize| -> Style {
-        if Some(col) == app.get_selected_cell().map(|(_, col)| col) {
+        if Some(col) == selected_col {
             return Style::default().bold().bg(Color::LightBlue);
         };
         Style::default().bold()
@@ -26,16 +33,17 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, app: &App) -> Result<(
                 .enumerate()
                 .map(|(index, header)| Cell::from(header.clone()).style(header_style(index))),
         ),
-    );
+    )
+    .bottom_margin(1);
 
     let index_style = |row: usize| -> Style {
-        if Some(row) == app.get_selected_cell().map(|(row, _)| row) {
+        if Some(row) == selected_row {
             return Style::default().bg(Color::LightBlue);
         };
         Style::default()
     };
     let cell_style = |(row, col): (usize, usize)| -> Style {
-        if Some((row, col)) == app.get_selected_cell() {
+        if Some((row, col)) == props.widget_state.selected_cell() {
             return Style::default().bg(Color::LightBlue);
         };
         Style::default()
@@ -53,10 +61,14 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, app: &App) -> Result<(
 
     let table = Table::new(body, get_header_widths(&table))
         .block(Block::default().title("Table").borders(Borders::ALL))
+        .style(if props.focused {
+            Style::default().bold().fg(Color::LightYellow)
+        } else {
+            Style::default()
+        })
         .header(header);
 
-    frame.render_stateful_widget(table, area, &mut app.get_table_state().clone());
-    Ok(())
+    frame.render_stateful_widget(table, area, &mut props.widget_state.clone());
 }
 
 /// Get the widths of each header, which is maximum width of the header and column values
@@ -90,6 +102,13 @@ mod tests {
             ],
         };
         let widths = get_header_widths(&table);
-        assert_eq!(widths, vec![Constraint::Length(8), Constraint::Length(8)]);
+        assert_eq!(
+            widths,
+            vec![
+                Constraint::Length(3),
+                Constraint::Length(8),
+                Constraint::Length(8)
+            ]
+        );
     }
 }

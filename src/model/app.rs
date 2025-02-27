@@ -1,25 +1,41 @@
 pub mod state;
 
-use std::collections::HashMap;
-
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
 use ratatui::widgets::TableState;
-use state::*;
+use state::DisplayFocus;
 
 use crate::error::StrataError;
 
 use super::table::{TableData, TableName};
 
+pub struct AppCommand {
+    command_name: String,
+    function: Box<dyn FnOnce(&mut App) -> Result<()>>,
+}
+
+impl AppCommand {
+    pub fn new(
+        command_name: &str,
+        function: Box<dyn FnOnce(&mut App) -> Result<()>>,
+    ) -> AppCommand {
+        AppCommand {
+            command_name: command_name.to_string(),
+            function,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct App {
-    display_mode: DisplayMode,
-    table_list: Vec<TableName>,
-    table_map: HashMap<TableName, TableData>,
+    display_focus: DisplayFocus,
+    table_name_list: Vec<TableName>,
+    table_data_list: Vec<TableData>,
     table_selector: Option<usize>,
     table_state: TableState,
-    user_input: String,
-    exiting: bool,
+    input: String,
+    command: Option<AppCommand>,
+    error_message: Vec<String>,
 }
 
 impl App {
@@ -28,30 +44,61 @@ impl App {
         Self::default()
     }
 
-    pub fn get_exit(&self) -> bool {
-        self.exiting
+    pub fn focus_last(&mut self) -> Result<()> {
+        match &self.display_focus {
+            DisplayFocus::TableList => Ok(()),
+            DisplayFocus::TableView => Ok(self.focus_table_list()),
+            DisplayFocus::Command(_) | DisplayFocus::Error(_) | DisplayFocus::Exit(_) => {
+                match DisplayFocus::last_focus(&self.display_focus) {
+                    DisplayFocus::TableList => Ok(self.focus_table_list()),
+                    DisplayFocus::TableView => self.focus_table_view(),
+                    _ => bail!(StrataError::InvalidOperationCall {
+                        operation: "cancel".to_string(),
+                        mode: self.display_focus.to_string(),
+                    }),
+                }
+            }
+        }
     }
 
-    pub fn get_display_mode(&self) -> &DisplayMode {
-        &self.display_mode
+    pub fn get_display_focus(&self) -> &DisplayFocus {
+        &self.display_focus
     }
 
-    pub fn get_table_list(&self) -> &Vec<TableName> {
-        &self.table_list
+    pub fn get_table_name_list(&self) -> &Vec<TableName> {
+        &self.table_name_list
     }
 
     pub fn get_selected_table_name(&self) -> Option<&TableName> {
-        self.table_list.get(self.table_selector?)
+        self.table_name_list.get(self.table_selector?)
     }
 
-    pub fn get_table_data(&self) -> Result<&TableData> {
-        let table_name = self
-            .get_selected_table_name()
+    pub fn update_table_name(&mut self, new_name: &str) -> Result<()> {
+        let table_selector = self
+            .table_selector
             .ok_or_eyre(StrataError::NoTableSelected)?;
 
-        self.table_map
-            .get(table_name)
-            .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
+        let new_table_name = TableName::from(new_name)?;
+        if self.table_name_list.contains(&new_table_name) {
+            bail!(StrataError::TableNameDuplicate(new_name.to_string()));
+        }
+
+        self.table_name_list[table_selector] = new_table_name;
+        Ok(())
+    }
+
+    pub fn get_selected_table_data(&self) -> Result<&TableData> {
+        let table_selector = self
+            .table_selector
+            .ok_or_eyre(StrataError::NoTableSelected)?;
+
+        self.table_data_list
+            .get(table_selector)
+            .ok_or_eyre(StrataError::TableNotFound(table_selector.to_string()))
+    }
+
+    pub fn get_table_selector(&self) -> Option<usize> {
+        self.table_selector
     }
 
     pub fn get_table_state(&self) -> &TableState {
@@ -63,210 +110,174 @@ impl App {
     }
 
     pub fn get_user_input(&self) -> &str {
-        &self.user_input
+        &self.input
     }
 
     pub fn push_user_input(&mut self, c: char) {
-        self.user_input.push(c);
+        self.input.push(c);
     }
 
     pub fn pop_user_input(&mut self) {
-        self.user_input.pop();
+        self.input.pop();
     }
 
     pub fn clear_user_input(&mut self) {
-        self.user_input.clear();
+        self.input.clear();
     }
 
-    pub fn set_exit(&mut self, exit: bool) -> Result<()> {
-        self.exiting = exit;
+    pub fn get_command_name(&self) -> Option<&str> {
+        self.command.as_ref().map(|c| c.command_name.as_str())
+    }
+
+    pub fn clear_command(&mut self) {
+        self.command = None;
+    }
+
+    pub fn execute_command(&mut self) -> Result<()> {
+        let command = self
+            .command
+            .take()
+            .ok_or_eyre(StrataError::CommandNotFound)?;
+        (command.function)(self)?;
+        self.command = None;
         Ok(())
     }
 
-    /// Call from SelectTable mode
-    /// Change the display mode to AddTable mode
-    pub fn set_add_table_mode(&mut self) -> Result<()> {
-        match &mut self.display_mode {
-            DisplayMode::SelectTable => {
-                self.display_mode = DisplayMode::AddTable;
-                Ok(())
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set mode AddTable".to_string(),
-                mode: self.display_mode.to_string()
-            }),
+    pub fn get_error_message(&self) -> &Vec<String> {
+        &self.error_message
+    }
+
+    pub fn push_error_message(&mut self, message: String) {
+        self.error_message.push(message);
+    }
+
+    pub fn clear_error_message(&mut self) {
+        self.error_message.clear();
+    }
+
+    pub fn focus_table_list(&mut self) {
+        self.display_focus = DisplayFocus::TableList;
+        if self.table_name_list.is_empty() {
+            self.table_selector = None;
+        } else if self.table_selector.is_none() {
+            self.table_selector = Some(0);
         }
     }
 
-    /// Call from AddTable or SelectCell mode
-    /// Change the display mode to SelectTable
-    pub fn set_select_table_mode(&mut self) -> Result<()> {
-        match &mut self.display_mode {
-            DisplayMode::AddTable | DisplayMode::SelectCell => {
-                self.display_mode = DisplayMode::SelectTable;
-                if self.table_list.is_empty() {
-                    self.table_selector = None;
-                } else if self.table_selector.is_none() {
-                    self.table_selector = Some(0);
-                }
-                Ok(())
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set SelectTable mode".to_string(),
-                mode: self.display_mode.to_string()
-            }),
+    pub fn focus_table_view(&mut self) -> Result<()> {
+        if self.table_name_list.is_empty() | self.table_data_list.is_empty() {
+            bail!(StrataError::NoTableAdded);
+        } else if self.table_selector.is_none() {
+            bail!(StrataError::NoTableSelected);
         }
-    }
 
-    // Call from EditCell mode
-    // Cancel edit and change the display mode to SelectCell
-    pub fn set_select_cell_mode(&mut self) -> Result<()> {
-        match &mut self.display_mode {
-            DisplayMode::EditCell => {
-                self.display_mode = DisplayMode::SelectCell;
-                Ok(())
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set SelectCell mode".to_string(),
-                mode: self.display_mode.to_string()
-            }),
+        self.display_focus = DisplayFocus::TableView;
+        if self.table_state.selected_cell().is_none() {
+            self.table_state.select_cell(Some((0, 0)));
         }
-    }
-
-    /// Call from SelectCell mode
-    /// Change the display mode to EditHeader
-    pub fn set_edit_header_mode(&mut self) -> Result<()> {
-        match &mut self.display_mode {
-            DisplayMode::SelectCell => {
-                self.display_mode = DisplayMode::EditHeader;
-                Ok(())
-            }
-            _ => bail!(StrataError::InvalidOperationCall {
-                operation: "set EditHeader mode".to_string(),
-                mode: self.display_mode.to_string()
-            }),
-        }
-    }
-
-    /// Call from SelectCell mode
-    /// Change the display mode to EditCell
-    pub fn set_edit_cell_mode(&mut self) -> Result<()> {
-        let DisplayMode::SelectCell = &mut self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "set EditCell mode".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
-        self.display_mode = DisplayMode::EditCell;
-        self.user_input = self.get_cell_value()?.to_string();
-
         Ok(())
     }
 
-    /// Call from AddTable mode
-    /// Add new table and change to SelectCell mode
+    pub fn focus_table_view_by_name(&mut self, table_name: &str) -> Result<()> {
+        if self.table_name_list.is_empty() | self.table_data_list.is_empty() {
+            bail!(StrataError::NoTableAdded);
+        }
+
+        let table_name = TableName::from(table_name)?;
+
+        self.table_selector = Some(
+            self.table_name_list
+                .iter()
+                .position(|tn| *tn == table_name)
+                .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))?,
+        );
+        self.display_focus = DisplayFocus::TableView;
+        self.table_state = TableState::default().with_selected_cell(Some((0, 0)));
+        Ok(())
+    }
+
+    pub fn focus_command(&mut self, command: AppCommand) {
+        self.command = Some(command);
+        self.display_focus = DisplayFocus::Command(Box::new(self.display_focus.clone()));
+    }
+
+    pub fn focus_error(&mut self) {
+        if !self.error_message.is_empty() {
+            self.display_focus = DisplayFocus::Error(Box::new(self.display_focus.clone()));
+        }
+    }
+
+    pub fn focus_exit(&mut self) {
+        self.display_focus = DisplayFocus::Exit(Box::new(self.display_focus.clone()));
+    }
+
     pub fn add_table(&mut self, table_name_str: &str) -> Result<()> {
-        let DisplayMode::AddTable = &mut self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "add table".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
         let table_name = TableName::from(table_name_str)?;
-        if self.table_map.contains_key(&table_name) {
+        if self.table_name_list.contains(&table_name) {
             bail!(StrataError::TableNameDuplicate(table_name_str.to_string()));
         }
 
-        self.table_map.insert(table_name.clone(), TableData::new()?);
-        self.table_list.push(table_name.clone());
-        self.display_mode = DisplayMode::SelectCell;
-        self.table_selector = Some(self.table_list.len() - 1);
-        self.table_state = TableState::default().with_selected_cell(Some((0, 0)));
+        self.table_data_list.push(TableData::new());
+        self.table_name_list.push(table_name.clone());
         Ok(())
     }
 
     /// Call from SelectTable mode
     /// Move the table selector down
     pub fn down_table_selector(&mut self) -> Result<()> {
-        let DisplayMode::SelectTable = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "down table selector".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
-        if self.table_list.is_empty() {
+        if self.table_name_list.is_empty() {
+            self.table_selector = None;
             bail!(StrataError::NoTableAdded);
         }
         let Some(index) = &mut self.table_selector else {
-            bail!(StrataError::NoTableSelected);
+            self.table_selector = Some(0);
+            return Ok(());
         };
 
-        *index = (*index + 1).min(self.table_list.len() - 1);
+        *index = (*index + 1).min(self.table_name_list.len() - 1);
         Ok(())
     }
 
-    /// Call from SelectTable mode
     /// Move the table selector up
     pub fn up_table_selector(&mut self) -> Result<()> {
-        let DisplayMode::SelectTable = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "up table selector".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
+        if self.table_name_list.is_empty() {
+            self.table_selector = None;
+            bail!(StrataError::NoTableAdded);
+        }
         let Some(index) = &mut self.table_selector else {
-            bail!(StrataError::NoTableSelected);
+            self.table_selector = Some(0);
+            return Ok(());
         };
 
         *index = (*index).saturating_sub(1);
         Ok(())
     }
 
-    /// Call from SelectTable mode
-    /// Select table and change to SelectCell mode
+    /// Select table and focus to TableView
     pub fn select_table(&mut self) -> Result<()> {
-        let DisplayMode::SelectTable = &mut self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "select table".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-        if self.table_list.is_empty() {
+        if self.table_name_list.is_empty() || self.table_data_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
 
-        self.display_mode = DisplayMode::SelectCell;
+        self.display_focus = DisplayFocus::TableView;
         self.table_state = TableState::default();
         self.table_state.select_cell(Some((0, 0)));
-        println!("{:?}", self.get_selected_cell());
         Ok(())
     }
 
     /// Call from SelectTable mode
     /// Remove the selected table
     pub fn remove_table(&mut self) -> Result<()> {
-        let DisplayMode::SelectTable = &mut self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "remove table".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
-        if self.table_list.is_empty() {
+        if self.table_name_list.is_empty() || self.table_data_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
-        let target_table_name = self
-            .get_selected_table_name()
-            .ok_or_eyre(StrataError::NoTableSelected)?
-            .clone();
+        let target_table_index = self
+            .table_selector
+            .ok_or_eyre(StrataError::NoTableSelected)?;
 
-        self.table_map.remove(&target_table_name);
-        self.table_list.retain(|tn| tn != &target_table_name);
-        self.display_mode = DisplayMode::SelectTable;
+        self.table_data_list.remove(target_table_index);
+        self.table_name_list.remove(target_table_index);
+        self.display_focus = DisplayFocus::TableList;
         self.table_selector = Some(0);
         self.table_state.select_cell(None);
         Ok(())
@@ -275,15 +286,15 @@ impl App {
     /// Call from SelectCell display mode
     /// Move the cursor in the table
     pub fn move_cell_selector(&mut self, row_move: isize, col_move: isize) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
+        let DisplayFocus::TableView = &self.display_focus else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "move cursor".to_string(),
-                mode: self.display_mode.to_string()
+                mode: self.display_focus.to_string()
             });
         };
 
         let (max_row, max_col) = {
-            let table_data = self.get_table_data()?;
+            let table_data = self.get_selected_table_data()?;
             (
                 table_data.get_max_row_index(),
                 table_data.get_max_col_index(),
@@ -328,14 +339,14 @@ impl App {
     /// Call from SelectCell mode
     /// Jump the cursor to the specified cell
     pub fn jump_cell_selector(&mut self, row: usize, col: usize) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
+        let DisplayFocus::TableView = &self.display_focus else {
             bail!(StrataError::InvalidOperationCall {
                 operation: "jump cursor".to_string(),
-                mode: self.display_mode.to_string()
+                mode: self.display_focus.to_string()
             });
         };
 
-        let table_data = self.get_table_data()?;
+        let table_data = self.get_selected_table_data()?;
         table_data.is_valid_row_index(row)?;
         table_data.is_valid_col_index(col)?;
 
@@ -343,77 +354,36 @@ impl App {
         Ok(())
     }
 
-    /// Call from SelectCell mode
     /// Expand the row
     pub fn expand_row(&mut self) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "expand row".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
         self.get_table_data_mut()?.expand_row()
     }
 
-    /// Call from SelectCell mode
     /// Collapse the row
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "collapse row".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
         self.get_table_data_mut()?.collapse_row(row)
     }
 
-    /// Call from SelectCell mode
     /// Expand the column
     pub fn expand_col(&mut self) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "expand col".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
         let table_data = self.get_table_data_mut()?;
         let header = format!("header{}", table_data.get_max_col_index() + 1);
 
         table_data.expand_col(&header)
     }
 
-    /// Call from SelectCell mode
     /// Collapse the column
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
-        let DisplayMode::SelectCell = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "collapse col".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
         self.get_table_data_mut()?.collapse_col(col)
     }
 
-    /// Call from SelectCell mode
-    /// Update the header
     pub fn update_header(&mut self, value: &str) -> Result<()> {
-        let DisplayMode::EditHeader = &self.display_mode else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "update header".to_string(),
-                mode: self.display_mode.to_string()
-            });
-        };
-
-        let (_, col) = self
+        let col = self
             .table_state
-            .selected_cell()
+            .selected_column()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
-        self.display_mode = DisplayMode::SelectCell;
+        self.display_focus = DisplayFocus::TableView;
         self.get_table_data_mut()?.update_header(col, value)
     }
 
@@ -423,7 +393,7 @@ impl App {
             .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
-        self.get_table_data()?.get_cell_value(row, col)
+        self.get_selected_table_data()?.get_cell_value(row, col)
     }
 
     pub fn update_cell_value(&mut self, value: &str) -> Result<()> {
@@ -432,18 +402,17 @@ impl App {
             .selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
-        self.display_mode = DisplayMode::SelectCell;
+        self.display_focus = DisplayFocus::TableView;
         self.get_table_data_mut()?.update_cell(row, col, value)
     }
 
     fn get_table_data_mut(&mut self) -> Result<&mut TableData> {
-        let table_name = self
-            .get_selected_table_name()
-            .ok_or_eyre(StrataError::NoTableSelected)?
-            .clone();
-        self.table_map
-            .get_mut(&table_name)
-            .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))
+        let index = self
+            .table_selector
+            .ok_or_eyre(StrataError::NoTableSelected)?;
+        self.table_data_list
+            .get_mut(index)
+            .ok_or_eyre(StrataError::TableNotFound(index.to_string()))
     }
 }
 
@@ -451,7 +420,7 @@ impl App {
 mod tests {
     use super::*;
 
-    fn setup_select_table_app() -> App {
+    fn setup_focus_table_list_app() -> App {
         let mut app = App::new();
         // setup table name
         let table_name_1 = TableName::from("table1").unwrap();
@@ -465,18 +434,17 @@ mod tests {
         table_data.update_cell(0, 1, "value0-1").unwrap();
         table_data.update_cell(1, 1, "value1-1").unwrap();
         // setup app state
-        app.display_mode = DisplayMode::SelectTable;
-        app.table_list = vec![table_name_1.clone(), table_name_2.clone()];
-        app.table_map
-            .insert(table_name_1.clone(), table_data.clone());
-        app.table_map.insert(table_name_2.clone(), table_data);
+        app.display_focus = DisplayFocus::TableList;
+        app.table_name_list = vec![table_name_1.clone(), table_name_2.clone()];
+        app.table_data_list.push(table_data.clone());
+        app.table_data_list.push(table_data);
         app.table_selector = Some(0);
         app.table_state.select_cell(None);
 
         app
     }
 
-    fn setup_select_cell_app() -> App {
+    fn setup_focus_table_view_app() -> App {
         let mut app = App::new();
         // setup table name
         let table_name_1 = TableName::from("table1").unwrap();
@@ -490,11 +458,10 @@ mod tests {
         table_data.update_cell(0, 1, "value0-1").unwrap();
         table_data.update_cell(1, 1, "value1-1").unwrap();
         // setup app state
-        app.display_mode = DisplayMode::SelectCell;
-        app.table_list = vec![table_name_1.clone(), table_name_2.clone()];
-        app.table_map
-            .insert(table_name_1.clone(), table_data.clone());
-        app.table_map.insert(table_name_2.clone(), table_data);
+        app.display_focus = DisplayFocus::TableView;
+        app.table_name_list = vec![table_name_1.clone(), table_name_2.clone()];
+        app.table_data_list.push(table_data.clone());
+        app.table_data_list.push(table_data);
         app.table_selector = Some(0);
         app.table_state = {
             let mut ts = TableState::default();
@@ -509,35 +476,32 @@ mod tests {
     fn test_add_table() {
         let mut app = App::new();
         // add tables
-        app.set_add_table_mode().unwrap();
         app.add_table("table1").unwrap();
-        app.set_select_table_mode().unwrap();
-        app.set_add_table_mode().unwrap();
         app.add_table("table2").unwrap();
 
-        assert_eq!(app.get_table_list().len(), 2);
+        assert_eq!(app.get_table_name_list().len(), 2);
         assert!(app
-            .get_table_list()
+            .get_table_name_list()
             .contains(&&TableName::from("table1").unwrap()));
         assert!(app
-            .get_table_list()
+            .get_table_name_list()
             .contains(&&TableName::from("table2").unwrap()));
     }
 
     #[test]
     fn test_remove_table() {
-        let mut app = setup_select_table_app();
+        let mut app = setup_focus_table_list_app();
 
         app.remove_table().unwrap();
-        assert_eq!(app.get_table_list().len(), 1);
+        assert_eq!(app.get_table_name_list().len(), 1);
         assert!(app
-            .get_table_list()
+            .get_table_name_list()
             .contains(&&TableName::from("table2").unwrap()));
     }
 
     #[test]
     fn test_select_table() {
-        let mut app = setup_select_table_app();
+        let mut app = setup_focus_table_list_app();
 
         app.select_table().unwrap();
         assert_eq!(
@@ -548,7 +512,7 @@ mod tests {
 
     #[test]
     fn test_move_table_selector() {
-        let mut app = setup_select_table_app();
+        let mut app = setup_focus_table_list_app();
 
         // check down table selector
         app.down_table_selector().unwrap();
@@ -568,7 +532,7 @@ mod tests {
     #[test]
     fn test_move_cell_selector() {
         // (0,0)
-        let mut app = setup_select_cell_app();
+        let mut app = setup_focus_table_view_app();
 
         // (1,0)
         app.move_cell_selector(1, 0).expect(&format!(
@@ -625,7 +589,7 @@ mod tests {
 
     #[test]
     fn test_jump_cell_selector() {
-        let mut app = setup_select_cell_app();
+        let mut app = setup_focus_table_view_app();
 
         app.jump_cell_selector(1, 0).expect("Failed to jump (1,0)");
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
@@ -638,5 +602,35 @@ mod tests {
         if let Ok(_) = app.jump_cell_selector(1, 2) {
             panic!("jump_cursor should fail");
         }
+    }
+
+    #[test]
+    fn test_focus_table_view_by_name() {
+        let mut app = setup_focus_table_list_app();
+
+        app.focus_table_view_by_name("table2").unwrap();
+        assert_eq!(app.get_display_focus().to_string(), "TableView");
+        assert_eq!(
+            app.get_selected_table_name().map(|tn| tn.as_str()),
+            Some("table2")
+        );
+    }
+
+    #[test]
+    fn test_focus_command() {
+        let mut app = setup_focus_table_list_app();
+        let command = AppCommand::new("test", Box::new(|_| Ok(())));
+        app.focus_command(command);
+
+        assert_eq!(
+            app.get_display_focus(),
+            &DisplayFocus::Command(Box::new(DisplayFocus::TableList))
+        );
+        assert_eq!(app.get_command_name(), Some("test"));
+        assert_eq!(
+            DisplayFocus::last_focus(app.get_display_focus()),
+            DisplayFocus::TableList
+        );
+        assert!(app.execute_command().is_ok());
     }
 }

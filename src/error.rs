@@ -28,4 +28,7 @@ pub enum StrataError {
 
     #[error("No cell selected")]
     NoCellSelected,
+
+    #[error("Command not found")]
+    CommandNotFound,
 }

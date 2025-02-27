@@ -5,19 +5,21 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::app::App;
+use crate::model::table::TableName;
 
-pub(super) fn render_table_list(
-    frame: &mut Frame,
-    area: Rect,
-    // table_list: &Vec<TableName>,
-    app: &App,
-) {
-    let list_items: Vec<ListItem> = app
-        .get_table_list()
+pub struct RenderTableListProps<'a> {
+    pub table_list: &'a Vec<TableName>,
+    pub selected_index: Option<usize>,
+    pub focused: bool,
+}
+
+pub(super) fn render_table_list(frame: &mut Frame, area: Rect, props: RenderTableListProps) {
+    let list_items: Vec<ListItem> = props
+        .table_list
         .iter()
-        .map(|t| {
-            ListItem::new(t.to_string()).style(if Some(t) == app.get_selected_table_name() {
+        .enumerate()
+        .map(|(i, t)| {
+            ListItem::new(t.to_string()).style(if Some(i) == props.selected_index {
                 Style::default().bg(Color::LightBlue)
             } else {
                 Style::default()
@@ -26,7 +28,11 @@ pub(super) fn render_table_list(
         .collect();
     let list = List::new(list_items)
         .block(Block::bordered().title("List"))
-        // .style(Style::new().white())
+        .style(if props.focused {
+            Style::default().bold().fg(Color::LightYellow)
+        } else {
+            Style::default()
+        })
         .highlight_style(Style::new().italic())
         .highlight_symbol(">>")
         .repeat_highlight_symbol(true)

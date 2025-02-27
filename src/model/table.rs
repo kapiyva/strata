@@ -46,13 +46,13 @@ impl Default for TableData {
 }
 
 impl TableData {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
+    pub fn new() -> Self {
+        Self {
             headers: (0..(INITIAL_SIZE))
                 .map(|i| format!("header{}", i))
                 .collect(),
             rows: vec![vec!["".to_string(); INITIAL_SIZE]; INITIAL_SIZE],
-        })
+        }
     }
 
     pub fn from_csv(_file_path: PathBuf) -> Result<Self> {
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_new_table() {
-        let table_data = TableData::new().unwrap();
+        let table_data = TableData::new();
         assert_eq!(table_data.headers.len(), INITIAL_SIZE);
         assert_eq!(table_data.headers[0], "header0");
         assert_eq!(table_data.headers[9], "header9");
