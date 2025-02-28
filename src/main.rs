@@ -129,7 +129,10 @@ fn handle_key_event(key: KeyEvent, app: &App) -> Message {
         {
             Message::Move(MoveDirection::Up)
         }
-        KeyCode::Char('l') if *app.get_display_focus() == DisplayFocus::TableView => {
+        KeyCode::Char('l')
+            if *app.get_display_focus() == DisplayFocus::TableView
+                || *app.get_display_focus() == DisplayFocus::TableList =>
+        {
             Message::Move(MoveDirection::Right)
         }
         _ => Message::NoOp,

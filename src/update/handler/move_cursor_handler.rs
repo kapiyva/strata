@@ -10,6 +10,7 @@ pub(crate) fn move_cursor_handler(app: &mut App, direction: MoveDirection) -> Re
         DisplayFocus::TableList => match direction {
             MoveDirection::Up => app.up_table_selector(),
             MoveDirection::Down => app.down_table_selector(),
+            MoveDirection::Right => app.focus_table_view(),
             _ => Ok(()),
         },
         DisplayFocus::TableView => match direction {

@@ -31,10 +31,12 @@ mod tests {
     #[test]
     fn test_add_handler() {
         let mut app = App::new();
-        // input table name
+        // focus add table command
         add_handler(&mut app).unwrap();
+        // input table name
         let table_name = "table1";
         table_name.chars().for_each(|c| app.push_user_input(c));
+        // execute command
         app.execute_command().unwrap();
 
         assert_eq!(*app.get_display_focus(), DisplayFocus::TableView);

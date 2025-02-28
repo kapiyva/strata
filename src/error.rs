@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum StrataError {
-    #[error("Invalid operation was called:  operation:[{operation:?}], mode:[{mode:?}]")]
-    InvalidOperationCall { operation: String, mode: String },
+    #[error("Invalid operation was called:  operation:[{operation:?}], focus:[{focus:?}]")]
+    InvalidOperationCall { operation: String, focus: String },
 
     #[error("Table already exists: table_name:[{0}]")]
     TableNameDuplicate(String),
@@ -31,4 +31,7 @@ pub enum StrataError {
 
     #[error("Command not found")]
     CommandNotFound,
+
+    #[error("String parse failed: {0}")]
+    StringParseError(String),
 }
