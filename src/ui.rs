@@ -43,7 +43,6 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             table_area,
             RenderTableProps {
                 table,
-                widget_state: app.get_table_state(),
                 focused: *app.get_display_focus() == DisplayFocus::TableView,
             },
         );

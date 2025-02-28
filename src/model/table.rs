@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
-use eyre::{bail, Result};
+use eyre::{bail, OptionExt, Result};
+use ratatui::widgets::TableState;
 
 use crate::error::StrataError;
 
@@ -32,15 +33,19 @@ const INITIAL_SIZE: usize = 10;
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct TableData {
+    pub exist_headers: bool,
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,
+    pub table_view_state: TableState,
 }
 
 impl Default for TableData {
     fn default() -> Self {
         Self {
+            exist_headers: true,
             headers: vec!["header0".to_string()],
             rows: vec![vec!["".to_string(); 1]],
+            table_view_state: TableState::default(),
         }
     }
 }
@@ -48,10 +53,12 @@ impl Default for TableData {
 impl TableData {
     pub fn new() -> Self {
         Self {
+            exist_headers: true,
             headers: (0..(INITIAL_SIZE))
                 .map(|i| format!("header{}", i))
                 .collect(),
             rows: vec![vec!["".to_string(); INITIAL_SIZE]; INITIAL_SIZE],
+            table_view_state: TableState::default().with_selected_cell(Some((0, 0))),
         }
     }
 
@@ -71,11 +78,44 @@ impl TableData {
         self.headers.len() - 1
     }
 
+    pub fn get_selected_index(&self) -> Option<(usize, usize)> {
+        self.table_view_state.selected_cell()
+    }
+
+    pub fn move_selector(&mut self, row_move: isize, col_move: isize) -> Result<()> {
+        let (max_row, max_col) = { (self.get_max_row_index(), self.get_max_col_index()) };
+        let (selected_row, selected_col) = self
+            .table_view_state
+            .selected_cell()
+            .ok_or_eyre(StrataError::NoCellSelected)?;
+        let new_row = selected_row.saturating_add_signed(row_move).min(max_row);
+        let new_col = selected_col.saturating_add_signed(col_move).min(max_col);
+
+        self.table_view_state.select_cell(Some((new_row, new_col)));
+        Ok(())
+    }
+
+    pub fn jump_cell_selector(&mut self, row: usize, col: usize) -> Result<()> {
+        self.is_valid_row_index(row)?;
+        self.is_valid_col_index(col)?;
+
+        self.table_view_state.select_cell(Some((row, col)));
+        Ok(())
+    }
+
     pub fn get_cell_value(&self, row: usize, col: usize) -> Result<&str> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;
 
         Ok(&self.rows[row][col])
+    }
+
+    pub fn select_cell(&mut self, row: usize, col: usize) -> Result<()> {
+        self.is_valid_row_index(row)?;
+        self.is_valid_col_index(col)?;
+
+        self.table_view_state.select_cell(Some((row, col)));
+        Ok(())
     }
 
     pub fn update_header(&mut self, col: usize, value: &str) -> Result<()> {
@@ -150,11 +190,13 @@ mod tests {
 
     fn setup_table_data() -> TableData {
         TableData {
+            exist_headers: true,
             headers: vec!["header0".to_string(), "header1".to_string()],
             rows: vec![
                 vec!["cell00".to_string(), "cell01".to_string()],
                 vec!["cell10".to_string(), "cell11".to_string()],
             ],
+            table_view_state: TableState::default().with_selected_cell(Some((0, 0))),
         }
     }
 

@@ -32,7 +32,6 @@ pub struct App {
     table_name_list: Vec<TableName>,
     table_data_list: Vec<TableData>,
     table_selector: Option<usize>,
-    table_state: TableState,
     input: String,
     command: Option<AppCommand>,
     error_message: Vec<String>,
@@ -54,7 +53,7 @@ impl App {
                     DisplayFocus::TableView => self.focus_table_view(),
                     _ => bail!(StrataError::InvalidOperationCall {
                         operation: "cancel".to_string(),
-                        mode: self.display_focus.to_string(),
+                        focus: self.display_focus.to_string(),
                     }),
                 }
             }
@@ -101,12 +100,12 @@ impl App {
         self.table_selector
     }
 
-    pub fn get_table_state(&self) -> &TableState {
-        &self.table_state
+    pub fn get_table_state(&self) -> Option<&TableState> {
+        Some(&self.get_selected_table_data().ok()?.table_view_state)
     }
 
     pub fn get_selected_cell(&self) -> Option<(usize, usize)> {
-        self.table_state.selected_cell()
+        self.get_table_state()?.selected_cell()
     }
 
     pub fn get_user_input(&self) -> &str {
@@ -172,8 +171,8 @@ impl App {
         }
 
         self.display_focus = DisplayFocus::TableView;
-        if self.table_state.selected_cell().is_none() {
-            self.table_state.select_cell(Some((0, 0)));
+        if self.get_selected_cell().is_none() {
+            self.get_table_data_mut()?.select_cell(0, 0)?;
         }
         Ok(())
     }
@@ -192,7 +191,6 @@ impl App {
                 .ok_or_eyre(StrataError::TableNotFound(table_name.to_string()))?,
         );
         self.display_focus = DisplayFocus::TableView;
-        self.table_state = TableState::default().with_selected_cell(Some((0, 0)));
         Ok(())
     }
 
@@ -260,8 +258,6 @@ impl App {
         }
 
         self.display_focus = DisplayFocus::TableView;
-        self.table_state = TableState::default();
-        self.table_state.select_cell(Some((0, 0)));
         Ok(())
     }
 
@@ -279,79 +275,23 @@ impl App {
         self.table_name_list.remove(target_table_index);
         self.display_focus = DisplayFocus::TableList;
         self.table_selector = Some(0);
-        self.table_state.select_cell(None);
         Ok(())
     }
 
-    /// Call from SelectCell display mode
     /// Move the cursor in the table
     pub fn move_cell_selector(&mut self, row_move: isize, col_move: isize) -> Result<()> {
-        let DisplayFocus::TableView = &self.display_focus else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "move cursor".to_string(),
-                mode: self.display_focus.to_string()
-            });
-        };
-
-        let (max_row, max_col) = {
-            let table_data = self.get_selected_table_data()?;
-            (
-                table_data.get_max_row_index(),
-                table_data.get_max_col_index(),
-            )
-        };
-        let (selected_row, selected_col) = self
-            .table_state
-            .selected_cell()
-            .ok_or_eyre(StrataError::NoCellSelected)?;
-
-        let new_row = match row_move {
-            0 => selected_row,
-            _ if row_move < 0 => {
-                let row_move_abs = row_move.unsigned_abs();
-                if selected_row < row_move_abs {
-                    0
-                } else {
-                    (selected_row - row_move_abs).max(0)
-                }
-            }
-            _ if row_move > 0 => (selected_row + (row_move as usize)).min(max_row),
-            _ => unreachable!(),
-        };
-        let new_col = match col_move {
-            0 => selected_col,
-            _ if col_move < 0 => {
-                let col_move_abs = col_move.unsigned_abs();
-                if selected_col < col_move_abs {
-                    0
-                } else {
-                    (selected_col - col_move_abs).max(0)
-                }
-            }
-            _ if col_move > 0 => (selected_col + (col_move as usize)).min(max_col),
-            _ => unreachable!(),
-        };
-
-        self.table_state.select_cell(Some((new_row, new_col)));
-        Ok(())
+        let table_data = self.get_table_data_mut()?;
+        table_data.move_selector(row_move, col_move)
     }
 
-    /// Call from SelectCell mode
     /// Jump the cursor to the specified cell
-    pub fn jump_cell_selector(&mut self, row: usize, col: usize) -> Result<()> {
-        let DisplayFocus::TableView = &self.display_focus else {
-            bail!(StrataError::InvalidOperationCall {
-                operation: "jump cursor".to_string(),
-                mode: self.display_focus.to_string()
-            });
-        };
+    pub fn jump_cell_selector(&mut self, index_str: &str) -> Result<()> {
+        let (row, col) = index_str
+            .split_once(" ")
+            .map(|(row, col)| (row.parse::<usize>(), col.parse::<usize>()))
+            .ok_or_eyre(StrataError::StringParseError(index_str.to_string()))?;
 
-        let table_data = self.get_selected_table_data()?;
-        table_data.is_valid_row_index(row)?;
-        table_data.is_valid_col_index(col)?;
-
-        self.table_state.select_cell(Some((row.clone(), col)));
-        Ok(())
+        self.get_table_data_mut()?.select_cell(row?, col?)
     }
 
     /// Expand the row
@@ -378,9 +318,8 @@ impl App {
     }
 
     pub fn update_header(&mut self, value: &str) -> Result<()> {
-        let col = self
-            .table_state
-            .selected_column()
+        let (_, col) = self
+            .get_selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.display_focus = DisplayFocus::TableView;
@@ -389,8 +328,7 @@ impl App {
 
     pub fn get_cell_value(&self) -> Result<&str> {
         let (row, col) = self
-            .table_state
-            .selected_cell()
+            .get_selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.get_selected_table_data()?.get_cell_value(row, col)
@@ -398,8 +336,7 @@ impl App {
 
     pub fn update_cell_value(&mut self, value: &str) -> Result<()> {
         let (row, col) = self
-            .table_state
-            .selected_cell()
+            .get_selected_cell()
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.display_focus = DisplayFocus::TableView;
@@ -433,13 +370,13 @@ mod tests {
         table_data.update_cell(1, 0, "value1-0").unwrap();
         table_data.update_cell(0, 1, "value0-1").unwrap();
         table_data.update_cell(1, 1, "value1-1").unwrap();
+        table_data.table_view_state.select_cell(None);
         // setup app state
         app.display_focus = DisplayFocus::TableList;
         app.table_name_list = vec![table_name_1.clone(), table_name_2.clone()];
         app.table_data_list.push(table_data.clone());
         app.table_data_list.push(table_data);
         app.table_selector = Some(0);
-        app.table_state.select_cell(None);
 
         app
     }
@@ -457,17 +394,13 @@ mod tests {
         table_data.update_cell(1, 0, "value1-0").unwrap();
         table_data.update_cell(0, 1, "value0-1").unwrap();
         table_data.update_cell(1, 1, "value1-1").unwrap();
+        table_data.table_view_state.select_cell(Some((0, 0)));
         // setup app state
         app.display_focus = DisplayFocus::TableView;
         app.table_name_list = vec![table_name_1.clone(), table_name_2.clone()];
         app.table_data_list.push(table_data.clone());
         app.table_data_list.push(table_data);
         app.table_selector = Some(0);
-        app.table_state = {
-            let mut ts = TableState::default();
-            ts.select_cell(Some((0, 0)));
-            ts
-        };
 
         app
     }
@@ -537,52 +470,52 @@ mod tests {
         // (1,0)
         app.move_cell_selector(1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
         // check out of bound
         app.move_cell_selector(1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
 
         // (1,1)
         app.move_cell_selector(0, 1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-1");
         // check out of bound
         app.move_cell_selector(0, 1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value1-1");
 
         // (0,1)
         app.move_cell_selector(-1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
         // check out of bound
         app.move_cell_selector(-1, 0).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
 
         // (0,0)
         app.move_cell_selector(0, -1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-0");
         // check out of bound
         app.move_cell_selector(0, -1).expect(&format!(
             "move_cursor failed: {:?}",
-            app.get_table_state().selected_cell()
+            app.get_selected_cell()
         ));
         assert_eq!(app.get_cell_value().unwrap(), "value0-0");
     }
@@ -591,15 +524,15 @@ mod tests {
     fn test_jump_cell_selector() {
         let mut app = setup_focus_table_view_app();
 
-        app.jump_cell_selector(1, 0).expect("Failed to jump (1,0)");
+        app.jump_cell_selector("1 0").expect("Failed to jump (1,0)");
         assert_eq!(app.get_cell_value().unwrap(), "value1-0");
-        app.jump_cell_selector(0, 1).expect("Failed to jump (0,1)");
+        app.jump_cell_selector("0 1").expect("Failed to jump (0,1)");
         assert_eq!(app.get_cell_value().unwrap(), "value0-1");
         // check jump to out of bound
-        if let Ok(_) = app.jump_cell_selector(2, 1) {
+        if let Ok(_) = app.jump_cell_selector("2 1") {
             panic!("jump_cursor should fail cell_selector",);
         }
-        if let Ok(_) = app.jump_cell_selector(1, 2) {
+        if let Ok(_) = app.jump_cell_selector("1 2") {
             panic!("jump_cursor should fail");
         }
     }

@@ -1,7 +1,7 @@
 use ratatui::{
     layout::{Constraint, Rect},
     style::{Color, Style, Stylize},
-    widgets::{Block, Borders, Cell, Row, Table, TableState},
+    widgets::{Block, Borders, Cell, Row, Table},
     Frame,
 };
 
@@ -9,14 +9,16 @@ use crate::model::table::TableData;
 
 pub struct RenderTableProps<'a> {
     pub table: &'a TableData,
-    pub widget_state: &'a TableState,
     pub focused: bool,
 }
 
 pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProps) {
     let table = props.table;
-    let selected_row = props.widget_state.selected();
-    let selected_col = props.widget_state.selected_column();
+    let (selected_row, selected_col) = props
+        .table
+        .get_selected_index()
+        .map(|(row, col)| (Some(row), Some(col)))
+        .unwrap_or((None, None));
 
     let header_style = |col: usize| -> Style {
         if Some(col) == selected_col {
@@ -31,7 +33,7 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProp
                 .headers
                 .iter()
                 .enumerate()
-                .map(|(index, header)| Cell::from(header.clone()).style(header_style(index))),
+                .map(|(col, header)| Cell::from(header.clone()).style(header_style(col))),
         ),
     )
     .bottom_margin(1);
@@ -43,7 +45,7 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProp
         Style::default()
     };
     let cell_style = |(row, col): (usize, usize)| -> Style {
-        if Some((row, col)) == props.widget_state.selected_cell() {
+        if Some((row, col)) == props.table.get_selected_index() {
             return Style::default().bg(Color::LightBlue);
         };
         Style::default()
@@ -68,7 +70,7 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProp
         })
         .header(header);
 
-    frame.render_stateful_widget(table, area, &mut props.widget_state.clone());
+    frame.render_stateful_widget(table, area, &mut props.table.table_view_state.clone());
 }
 
 /// Get the widths of each header, which is maximum width of the header and column values
@@ -89,17 +91,21 @@ fn get_header_widths(table: &TableData) -> Vec<Constraint> {
 
 #[cfg(test)]
 mod tests {
+    use ratatui::widgets::TableState;
+
     use super::*;
     use crate::model::table::TableData;
 
     #[test]
     fn test_get_header_widths() {
         let table = TableData {
+            exist_headers: true,
             headers: vec!["header1".to_string(), "header2".to_string()],
             rows: vec![
                 vec!["row1col1".to_string(), "row1col2".to_string()],
                 vec!["row2col1".to_string(), "row2col2".to_string()],
             ],
+            table_view_state: TableState::default().with_selected_cell(Some((0, 0))),
         };
         let widths = get_header_widths(&table);
         assert_eq!(
