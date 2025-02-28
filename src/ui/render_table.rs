@@ -16,7 +16,7 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProp
     let table = props.table;
     let (selected_row, selected_col) = props
         .table
-        .get_selected_index()
+        .get_selector_index()
         .map(|(row, col)| (Some(row), Some(col)))
         .unwrap_or((None, None));
 
@@ -45,7 +45,7 @@ pub(super) fn render_table(frame: &mut Frame, area: Rect, props: RenderTableProp
         Style::default()
     };
     let cell_style = |(row, col): (usize, usize)| -> Style {
-        if Some((row, col)) == props.table.get_selected_index() {
+        if Some((row, col)) == props.table.get_selector_index() {
             return Style::default().bg(Color::LightBlue);
         };
         Style::default()

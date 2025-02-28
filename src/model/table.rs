@@ -78,7 +78,7 @@ impl TableData {
         self.headers.len() - 1
     }
 
-    pub fn get_selected_index(&self) -> Option<(usize, usize)> {
+    pub fn get_selector_index(&self) -> Option<(usize, usize)> {
         self.table_view_state.selected_cell()
     }
 
@@ -95,7 +95,7 @@ impl TableData {
         Ok(())
     }
 
-    pub fn jump_cell_selector(&mut self, row: usize, col: usize) -> Result<()> {
+    pub fn jump_selector(&mut self, row: usize, col: usize) -> Result<()> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;
 
