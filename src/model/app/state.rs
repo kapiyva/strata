@@ -44,9 +44,9 @@ impl DisplayFocus {
                 "<r> Add new row | <e> Edit cell | <E> Edit header | <d> Delete cell | <J> Jump"
                     .to_string()
             }
-            DisplayFocus::Command(_) => "<Enter> submit | <Esc> cancel".to_string(),
-            DisplayFocus::Error(_) => " <Enter> exit".to_string(),
-            DisplayFocus::Exit(_) => " <Enter> exit | <Esc> cancel".to_string(),
+            DisplayFocus::Command(_) => "<Enter> Submit | <Esc> Cancel".to_string(),
+            DisplayFocus::Error(_) => " <Enter> Exit".to_string(),
+            DisplayFocus::Exit(_) => " <Enter> Exit | <Esc> Cancel".to_string(),
         }
     }
 }
