@@ -2,7 +2,10 @@ use eyre::{bail, Result};
 
 use crate::{
     error::StrataError,
-    model::app::{state::DisplayFocus, App, AppCommand},
+    model::app::{
+        state::{AppCommand, DisplayFocus},
+        App,
+    },
 };
 
 pub(crate) fn jump_handler(app: &mut App) -> Result<()> {

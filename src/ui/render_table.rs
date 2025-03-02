@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn test_get_header_widths() {
         let table = TableData {
-            exist_headers: true,
+            no_headers: false,
             headers: vec!["header1".to_string(), "header2".to_string()],
             rows: vec![
                 vec!["row1col1".to_string(), "row1col2".to_string()],

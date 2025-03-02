@@ -1,3 +1,7 @@
+use eyre::Result;
+
+use super::App;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum DisplayFocus {
     TableList,
@@ -48,6 +52,31 @@ impl DisplayFocus {
             DisplayFocus::Error(_) => " <Enter> Exit".to_string(),
             DisplayFocus::Exit(_) => " <Enter> Exit | <Esc> Cancel".to_string(),
         }
+    }
+}
+
+pub struct AppCommand {
+    command_name: String,
+    function: Box<dyn FnOnce(&mut App) -> Result<()>>,
+}
+
+impl AppCommand {
+    pub fn new(
+        command_name: &str,
+        function: Box<dyn FnOnce(&mut App) -> Result<()>>,
+    ) -> AppCommand {
+        AppCommand {
+            command_name: command_name.to_string(),
+            function,
+        }
+    }
+
+    pub fn get_command_name(&self) -> &str {
+        &self.command_name
+    }
+
+    pub fn execute(self, app: &mut App) -> Result<()> {
+        (self.function)(app)
     }
 }
 

@@ -33,7 +33,7 @@ const INITIAL_SIZE: usize = 10;
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, PartialEq))]
 pub struct TableData {
-    pub exist_headers: bool,
+    pub no_headers: bool,
     pub headers: Vec<String>,
     pub rows: Vec<Vec<String>>,
     pub table_view_state: TableState,
@@ -42,7 +42,7 @@ pub struct TableData {
 impl Default for TableData {
     fn default() -> Self {
         Self {
-            exist_headers: true,
+            no_headers: false,
             headers: vec!["header0".to_string()],
             rows: vec![vec!["".to_string(); 1]],
             table_view_state: TableState::default(),
@@ -53,7 +53,7 @@ impl Default for TableData {
 impl TableData {
     pub fn new() -> Self {
         Self {
-            exist_headers: true,
+            no_headers: false,
             headers: (0..(INITIAL_SIZE))
                 .map(|i| format!("header{}", i))
                 .collect(),
@@ -62,8 +62,29 @@ impl TableData {
         }
     }
 
-    pub fn from_csv(_file_path: PathBuf) -> Result<Self> {
-        todo!()
+    pub fn from_csv(file_path: PathBuf) -> Result<Self> {
+        let mut reader = csv::Reader::from_path(file_path)?;
+        let mut headers = Vec::new();
+        let mut rows = Vec::<Vec<String>>::new();
+        while let Some(record) = reader.records().next() {
+            let record = record?;
+            if headers.is_empty() {
+                headers = record.iter().map(|s| s.to_string()).collect();
+            } else {
+                rows.push(record.iter().map(|s| s.to_string()).collect());
+            }
+        }
+
+        Ok(Self {
+            no_headers: false,
+            headers,
+            rows,
+            table_view_state: TableState::default().with_selected_cell(Some((0, 0))),
+        })
+    }
+
+    pub fn switch_headers(&mut self) {
+        self.no_headers = !self.no_headers;
     }
 
     pub fn get_headers(&self) -> &Vec<String> {
@@ -190,7 +211,7 @@ mod tests {
 
     fn setup_table_data() -> TableData {
         TableData {
-            exist_headers: true,
+            no_headers: false,
             headers: vec!["header0".to_string(), "header1".to_string()],
             rows: vec![
                 vec!["cell00".to_string(), "cell01".to_string()],

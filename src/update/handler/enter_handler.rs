@@ -1,6 +1,9 @@
 use eyre::Result;
 
-use crate::model::app::{state::DisplayFocus, App, AppCommand};
+use crate::model::app::{
+    state::{AppCommand, DisplayFocus},
+    App,
+};
 
 pub(crate) fn enter_handler(app: &mut App) -> Result<()> {
     match app.get_display_focus() {

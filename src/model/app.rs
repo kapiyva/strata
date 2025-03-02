@@ -3,28 +3,11 @@ pub mod state;
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
 use ratatui::widgets::TableState;
-use state::DisplayFocus;
+use state::{AppCommand, DisplayFocus};
 
 use crate::error::StrataError;
 
 use super::table::{TableData, TableName};
-
-pub struct AppCommand {
-    command_name: String,
-    function: Box<dyn FnOnce(&mut App) -> Result<()>>,
-}
-
-impl AppCommand {
-    pub fn new(
-        command_name: &str,
-        function: Box<dyn FnOnce(&mut App) -> Result<()>>,
-    ) -> AppCommand {
-        AppCommand {
-            command_name: command_name.to_string(),
-            function,
-        }
-    }
-}
 
 #[derive(Default)]
 pub struct App {
@@ -125,7 +108,7 @@ impl App {
     }
 
     pub fn get_command_name(&self) -> Option<&str> {
-        self.command.as_ref().map(|c| c.command_name.as_str())
+        self.command.as_ref().map(|c| c.get_command_name())
     }
 
     pub fn clear_command(&mut self) {
@@ -137,8 +120,7 @@ impl App {
             .command
             .take()
             .ok_or_eyre(StrataError::CommandNotFound)?;
-        (command.function)(self)?;
-        self.command = None;
+        command.execute(self)?;
         Ok(())
     }
 
@@ -172,7 +154,7 @@ impl App {
 
         self.display_focus = DisplayFocus::TableView;
         if self.get_selected_cell().is_none() {
-            self.get_table_data_mut()?.select_cell(0, 0)?;
+            self.get_selected_table_data_mut()?.select_cell(0, 0)?;
         }
         Ok(())
     }
@@ -280,8 +262,8 @@ impl App {
 
     /// Move the cursor in the table
     pub fn move_cell_selector(&mut self, row_move: isize, col_move: isize) -> Result<()> {
-        let table_data = self.get_table_data_mut()?;
-        table_data.move_selector(row_move, col_move)
+        self.get_selected_table_data_mut()?
+            .move_selector(row_move, col_move)
     }
 
     /// Jump the cursor to the specified cell
@@ -291,22 +273,22 @@ impl App {
             .map(|(row, col)| (row.parse::<usize>(), col.parse::<usize>()))
             .ok_or_eyre(StrataError::StringParseError(index_str.to_string()))?;
 
-        self.get_table_data_mut()?.select_cell(row?, col?)
+        self.get_selected_table_data_mut()?.select_cell(row?, col?)
     }
 
     /// Expand the row
     pub fn expand_row(&mut self) -> Result<()> {
-        self.get_table_data_mut()?.expand_row()
+        self.get_selected_table_data_mut()?.expand_row()
     }
 
     /// Collapse the row
     pub fn collapse_row(&mut self, row: usize) -> Result<()> {
-        self.get_table_data_mut()?.collapse_row(row)
+        self.get_selected_table_data_mut()?.collapse_row(row)
     }
 
     /// Expand the column
     pub fn expand_col(&mut self) -> Result<()> {
-        let table_data = self.get_table_data_mut()?;
+        let table_data = self.get_selected_table_data_mut()?;
         let header = format!("header{}", table_data.get_max_col_index() + 1);
 
         table_data.expand_col(&header)
@@ -314,7 +296,7 @@ impl App {
 
     /// Collapse the column
     pub fn collapse_col(&mut self, col: usize) -> Result<()> {
-        self.get_table_data_mut()?.collapse_col(col)
+        self.get_selected_table_data_mut()?.collapse_col(col)
     }
 
     pub fn update_header(&mut self, value: &str) -> Result<()> {
@@ -323,7 +305,8 @@ impl App {
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.display_focus = DisplayFocus::TableView;
-        self.get_table_data_mut()?.update_header(col, value)
+        self.get_selected_table_data_mut()?
+            .update_header(col, value)
     }
 
     pub fn get_cell_value(&self) -> Result<&str> {
@@ -340,10 +323,11 @@ impl App {
             .ok_or_eyre(StrataError::NoCellSelected)?;
 
         self.display_focus = DisplayFocus::TableView;
-        self.get_table_data_mut()?.update_cell(row, col, value)
+        self.get_selected_table_data_mut()?
+            .update_cell(row, col, value)
     }
 
-    fn get_table_data_mut(&mut self) -> Result<&mut TableData> {
+    fn get_selected_table_data_mut(&mut self) -> Result<&mut TableData> {
         let index = self
             .table_selector
             .ok_or_eyre(StrataError::NoTableSelected)?;
