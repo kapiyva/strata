@@ -1,5 +1,7 @@
 pub mod state;
 
+use std::{ffi::OsStr, path::Path};
+
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
 use ratatui::widgets::TableState;
@@ -7,7 +9,7 @@ use state::{AppCommand, DisplayFocus};
 
 use crate::error::StrataError;
 
-use super::table::{TableData, TableName};
+use super::table::{TableData, TableName, INITIAL_TABLE_NAME};
 
 #[derive(Default)]
 pub struct App {
@@ -202,8 +204,20 @@ impl App {
         Ok(())
     }
 
-    /// Call from SelectTable mode
-    /// Move the table selector down
+    pub fn open_table(&mut self, file_path: &Path) -> Result<()> {
+        let table_name = file_path
+            .file_stem()
+            .and_then(OsStr::to_str)
+            .unwrap_or(INITIAL_TABLE_NAME)
+            .to_string();
+        let new_table = TableData::from_csv(file_path)?;
+
+        self.table_name_list.push(TableName::from(&table_name)?);
+        self.table_data_list.push(new_table);
+
+        Ok(())
+    }
+
     pub fn down_table_selector(&mut self) -> Result<()> {
         if self.table_name_list.is_empty() {
             self.table_selector = None;

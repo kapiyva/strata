@@ -6,3 +6,4 @@ pub(crate) mod enter_handler;
 pub(crate) mod hyper_edit_handler;
 pub(crate) mod jump_handler;
 pub(crate) mod move_cursor_handler;
+pub(crate) mod open_handler;

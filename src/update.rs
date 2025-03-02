@@ -17,7 +17,6 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::Move(direction) => move_cursor_handler(app, direction),
         Message::Jump => jump_handler(app),
         Message::Add => add_handler(app),
-        // TODO
         Message::Open => open_handler(app),
         Message::Edit => edit_handler(app),
         Message::HyperEdit => hyper_edit_handler(app),

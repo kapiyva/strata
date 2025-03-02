@@ -87,6 +87,7 @@ fn handle_key_event(key: KeyEvent, app: &App) -> Message {
         KeyCode::Char('d') => Message::Delete,
         KeyCode::Char('e') => Message::Edit,
         KeyCode::Char('E') => Message::HyperEdit,
+        KeyCode::Char('o') => Message::Open,
         KeyCode::Char('r') => match app.get_display_focus() {
             DisplayFocus::TableView => Message::ExpandRow,
             _ => Message::NoOp,

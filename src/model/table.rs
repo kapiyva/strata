@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use eyre::{bail, OptionExt, Result};
 use ratatui::widgets::TableState;
@@ -15,11 +15,15 @@ impl ToString for TableName {
 }
 
 impl TableName {
-    pub fn from(name: &str) -> Result<Self> {
+    pub fn from<T>(_name: T) -> Result<TableName>
+    where
+        T: ToString,
+    {
+        let name = _name.to_string();
         if name.is_empty() {
             bail!(StrataError::InvalidTableName)
         } else {
-            Ok(Self(name.to_string()))
+            Ok(Self(name))
         }
     }
 
@@ -28,7 +32,8 @@ impl TableName {
     }
 }
 
-const INITIAL_SIZE: usize = 10;
+pub const INITIAL_TABLE_SIZE: usize = 10;
+pub const INITIAL_TABLE_NAME: &str = "new_table";
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, PartialEq))]
@@ -54,15 +59,15 @@ impl TableData {
     pub fn new() -> Self {
         Self {
             no_headers: false,
-            headers: (0..(INITIAL_SIZE))
+            headers: (0..(INITIAL_TABLE_SIZE))
                 .map(|i| format!("header{}", i))
                 .collect(),
-            rows: vec![vec!["".to_string(); INITIAL_SIZE]; INITIAL_SIZE],
+            rows: vec![vec!["".to_string(); INITIAL_TABLE_SIZE]; INITIAL_TABLE_SIZE],
             table_view_state: TableState::default().with_selected_cell(Some((0, 0))),
         }
     }
 
-    pub fn from_csv(file_path: PathBuf) -> Result<Self> {
+    pub fn from_csv(file_path: &Path) -> Result<Self> {
         let mut reader = csv::Reader::from_path(file_path)?;
         let mut headers = Vec::new();
         let mut rows = Vec::<Vec<String>>::new();
@@ -85,6 +90,12 @@ impl TableData {
 
     pub fn switch_headers(&mut self) {
         self.no_headers = !self.no_headers;
+        match self.no_headers {
+            true => self.headers = self.rows.remove(0),
+            false => {
+                self.rows.insert(0, self.headers.clone());
+            }
+        }
     }
 
     pub fn get_headers(&self) -> &Vec<String> {
@@ -236,10 +247,22 @@ mod tests {
     #[test]
     fn test_new_table() {
         let table_data = TableData::new();
-        assert_eq!(table_data.headers.len(), INITIAL_SIZE);
+        assert_eq!(table_data.headers.len(), INITIAL_TABLE_SIZE);
         assert_eq!(table_data.headers[0], "header0");
         assert_eq!(table_data.headers[9], "header9");
-        assert_eq!(table_data.rows.len(), INITIAL_SIZE);
+        assert_eq!(table_data.rows.len(), INITIAL_TABLE_SIZE);
+    }
+
+    #[test]
+    fn test_open_csv() {
+        let file_path = Path::new("tests/data/test_table.csv");
+        let table_data = TableData::from_csv(file_path).unwrap();
+        assert_eq!(table_data.headers.len(), 3);
+        assert_eq!(table_data.headers[0], "header0");
+        assert_eq!(table_data.headers[2], "header2");
+        assert_eq!(table_data.rows.len(), 2);
+        assert_eq!(table_data.rows[0][0], "cell00");
+        assert_eq!(table_data.rows[1][2], "cell12");
     }
 
     #[test]
