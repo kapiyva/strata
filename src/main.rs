@@ -47,7 +47,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
         }
         // handle key event
         if let Event::Key(key) = event::read()? {
-            let message = handle_key_event(key, app);
+            let message = handle_key_event(key, app.get_display_focus());
             if let Message::Exit = message {
                 break;
             }
@@ -61,16 +61,14 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
     Ok(())
 }
 
-fn handle_key_event(key: KeyEvent, app: &App) -> Message {
+fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
     match key.code {
         // input charactor
-        KeyCode::Char(c) if matches!(app.get_display_focus(), DisplayFocus::Command(_)) => {
-            Message::Input(c)
-        }
+        KeyCode::Char(c) if matches!(focus, DisplayFocus::Command(_)) => Message::Input(c),
         // special key
         KeyCode::Esc => Message::Cancel,
         KeyCode::Enter => {
-            if let DisplayFocus::Exit(_) = app.get_display_focus() {
+            if let DisplayFocus::Exit(_) = focus {
                 return Message::Exit;
             }
             Message::Enter
@@ -78,7 +76,7 @@ fn handle_key_event(key: KeyEvent, app: &App) -> Message {
         KeyCode::Backspace => Message::BackSpace,
         // others
         KeyCode::Char('q') => {
-            if let DisplayFocus::Exit(_) = app.get_display_focus() {
+            if let DisplayFocus::Exit(_) = focus {
                 return Message::Exit;
             }
             Message::Exiting
@@ -88,19 +86,19 @@ fn handle_key_event(key: KeyEvent, app: &App) -> Message {
         KeyCode::Char('e') => Message::Edit,
         KeyCode::Char('E') => Message::HyperEdit,
         KeyCode::Char('o') => Message::Open,
-        KeyCode::Char('r') => match app.get_display_focus() {
+        KeyCode::Char('r') => match focus {
             DisplayFocus::TableView => Message::ExpandRow,
             _ => Message::NoOp,
         },
-        KeyCode::Char('R') => match app.get_display_focus() {
+        KeyCode::Char('R') => match focus {
             DisplayFocus::TableView => Message::CollapseRow,
             _ => Message::NoOp,
         },
-        KeyCode::Char('c') => match app.get_display_focus() {
+        KeyCode::Char('c') => match focus {
             DisplayFocus::TableView => Message::ExpandColumn,
             _ => Message::NoOp,
         },
-        KeyCode::Char('C') => match app.get_display_focus() {
+        KeyCode::Char('C') => match focus {
             DisplayFocus::TableView => Message::CollapseColumn,
             _ => Message::NoOp,
         },
@@ -109,30 +107,25 @@ fn handle_key_event(key: KeyEvent, app: &App) -> Message {
         KeyCode::Down => Message::Move(MoveDirection::Down),
         KeyCode::Right => Message::Move(MoveDirection::Right),
         KeyCode::Left => Message::Move(MoveDirection::Left),
-        KeyCode::Tab if *app.get_display_focus() == DisplayFocus::TableView => {
-            Message::Move(MoveDirection::Right)
-        }
+        KeyCode::Tab if *focus == DisplayFocus::TableView => Message::Move(MoveDirection::Right),
         KeyCode::Char('J') => Message::Jump,
 
         // vim keybindings
-        KeyCode::Char('h') if *app.get_display_focus() == DisplayFocus::TableView => {
+        KeyCode::Char('h') if *focus == DisplayFocus::TableView => {
             Message::Move(MoveDirection::Left)
         }
         KeyCode::Char('j')
-            if *app.get_display_focus() == DisplayFocus::TableView
-                || *app.get_display_focus() == DisplayFocus::TableList =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableList =>
         {
             Message::Move(MoveDirection::Down)
         }
         KeyCode::Char('k')
-            if *app.get_display_focus() == DisplayFocus::TableView
-                || *app.get_display_focus() == DisplayFocus::TableList =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableList =>
         {
             Message::Move(MoveDirection::Up)
         }
         KeyCode::Char('l')
-            if *app.get_display_focus() == DisplayFocus::TableView
-                || *app.get_display_focus() == DisplayFocus::TableList =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableList =>
         {
             Message::Move(MoveDirection::Right)
         }
