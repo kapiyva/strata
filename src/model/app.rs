@@ -18,17 +18,13 @@ use super::component::{
 // todo: rearchitect App to use components
 pub struct App {
     display_focus: DisplayFocus,
-    pub table_selector: TableSelector,
+    table_selector: TableSelector,
     table_view_list: Vec<TableView>,
     command: Option<AppCommand>,
     error_message: Vec<String>,
-    // input: String,
 }
 
 impl App {
-    pub fn get_comand_self(self) -> Option<AppCommand> {
-        self.command
-    }
     pub fn new() -> Self {
         Self::default()
     }
@@ -66,8 +62,8 @@ impl App {
             .ok_or_eyre(StrataError::TableNotFound(index.to_string()))
     }
 
-    pub fn get_command(&self) -> &Option<AppCommand> {
-        &self.command
+    pub fn get_command(&self) -> Option<&AppCommand> {
+        self.command.as_ref()
     }
 
     pub fn get_command_mut(&mut self) -> Option<&mut AppCommand> {
@@ -82,20 +78,21 @@ impl App {
         &self.error_message
     }
 
-    pub fn focus_table_list(&mut self) {
+    pub fn focus_table_list(&mut self) -> &mut Self {
         self.display_focus = DisplayFocus::TableSelector;
+        self
     }
 
-    pub fn focus_table_view(&mut self) -> Result<()> {
+    pub fn focus_table_view(&mut self) -> Result<&mut Self> {
         if self.table_selector.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
 
         self.display_focus = DisplayFocus::TableView;
-        Ok(())
+        Ok(self)
     }
 
-    pub fn focus_table_view_by_name(&mut self, table_name: &str) -> Result<()> {
+    pub fn focus_table_view_by_name(&mut self, table_name: &str) -> Result<&mut Self> {
         if self.table_selector.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
@@ -104,27 +101,30 @@ impl App {
 
         self.get_table_selector_mut().select_by_name(&table_name)?;
         self.display_focus = DisplayFocus::TableView;
-        Ok(())
+        Ok(self)
     }
 
-    pub fn focus_command(&mut self, command: AppCommand) {
+    pub fn focus_command(&mut self, command: AppCommand) -> &mut Self {
         self.command = Some(command);
         self.display_focus = DisplayFocus::Command(Box::new(self.display_focus.clone()));
+        self
     }
 
-    pub fn focus_error(&mut self) {
+    pub fn focus_error(&mut self) -> &mut Self {
         if !self.error_message.is_empty() {
             self.display_focus = DisplayFocus::Error(Box::new(self.display_focus.clone()));
         }
+        self
     }
 
-    pub fn focus_exit(&mut self) {
+    pub fn focus_exit(&mut self) -> &mut Self {
         self.display_focus = DisplayFocus::Exit(Box::new(self.display_focus.clone()));
+        self
     }
 
-    pub fn focus_last(&mut self) -> Result<()> {
+    pub fn focus_last(&mut self) -> Result<&mut Self> {
         match &self.display_focus {
-            DisplayFocus::TableSelector => Ok(()),
+            DisplayFocus::TableSelector => Ok(self),
             DisplayFocus::TableView => Ok(self.focus_table_list()),
             DisplayFocus::Command(_) | DisplayFocus::Error(_) | DisplayFocus::Exit(_) => {
                 match DisplayFocus::last_focus(&self.display_focus) {
