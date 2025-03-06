@@ -6,7 +6,7 @@ use crate::model::{
 };
 
 pub(crate) fn handle_add(app: &mut App) -> Result<()> {
-    match app.get_display_focus() {
+    match app.display_focus() {
         DisplayFocus::TableSelector => {
             app.focus_command(AppCommand::new(
                 "Add Table",
@@ -30,7 +30,7 @@ mod tests {
     use super::*;
 
     fn input(app: &mut App, input: &str) {
-        let command = app.get_command_mut().unwrap();
+        let command = app.command_mut().unwrap();
         for c in input.chars() {
             command.input(c);
         }
@@ -47,10 +47,10 @@ mod tests {
         // execute command
         app.execute_command().unwrap();
 
-        assert_eq!(*app.get_display_focus(), DisplayFocus::TableView);
-        assert_eq!(app.get_table_selector().get_table_list().len(), 1);
+        assert_eq!(*app.display_focus(), DisplayFocus::TableView);
+        assert_eq!(app.table_selector().get_table_list().len(), 1);
         assert_eq!(
-            app.get_table_selector().get_selected_table_name(),
+            app.table_selector().selected_table_name(),
             Some(&TableName::from(table_name).unwrap())
         );
     }

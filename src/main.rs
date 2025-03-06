@@ -45,17 +45,17 @@ fn main() -> Result<()> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
     loop {
         if let Err(e) = terminal.draw(|f| ui(f, app)) {
-            app.get_error_popup_mut().push(e.to_string());
+            app.error_popup_mut().push(e.to_string());
             app.focus_error();
         }
         // handle key event
         if let Event::Key(key) = event::read()? {
-            let message = handle_key_event(key, app.get_display_focus());
+            let message = handle_key_event(key, app.display_focus());
             if let Message::Exit = message {
                 break;
             }
             if let Err(e) = update(app, message) {
-                app.get_error_popup_mut().push(e.to_string());
+                app.error_popup_mut().push(e.to_string());
                 app.focus_error();
             }
         }

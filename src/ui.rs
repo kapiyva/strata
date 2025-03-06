@@ -23,22 +23,22 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             .areas(main_area);
 
     // render
-    app.get_table_selector().render(
+    app.table_selector().render(
         frame,
         table_selector_area,
-        *app.get_display_focus() == DisplayFocus::TableSelector,
+        *app.display_focus() == DisplayFocus::TableSelector,
     );
-    if let Ok(tv) = app.get_selected_table_view() {
+    if let Ok(tv) = app.selected_table_view() {
         tv.render(
             frame,
             table_area,
-            app.get_display_focus() == &DisplayFocus::TableView,
+            app.display_focus() == &DisplayFocus::TableView,
         );
     };
-    render_footer(frame, footer_area, app.get_display_focus());
+    render_footer(frame, footer_area, app.display_focus());
 
     // render overlay
-    match app.get_display_focus() {
+    match app.display_focus() {
         DisplayFocus::Command(_) => {
             let command_area = Rect {
                 x: frame.area().width / 4,
@@ -46,7 +46,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
                 width: frame.area().width / 2,
                 height: 3,
             };
-            if let Some(command) = app.get_command() {
+            if let Some(command) = app.command() {
                 command.render(frame, command_area, true);
             };
         }
@@ -55,10 +55,10 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
                 x: frame.area().width / 4,
                 y: frame.area().height / 3,
                 width: frame.area().width / 2,
-                height: app.get_error_popup().size() as u16 + 6,
+                height: app.error_popup().size() as u16 + 6,
             };
             // render_error(frame, error_area, app.get_error_message());
-            app.get_error_popup().render(frame, error_area, true);
+            app.error_popup().render(frame, error_area, true);
         }
         DisplayFocus::Exit(_) => {
             render_exit(frame);

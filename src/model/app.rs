@@ -30,22 +30,22 @@ impl App {
         Self::default()
     }
 
-    pub fn get_display_focus(&self) -> &DisplayFocus {
+    pub fn display_focus(&self) -> &DisplayFocus {
         &self.display_focus
     }
 
-    pub fn get_table_selector(&self) -> &TableSelector {
+    pub fn table_selector(&self) -> &TableSelector {
         &self.table_selector
     }
 
-    pub fn get_table_selector_mut(&mut self) -> &mut TableSelector {
+    pub fn table_selector_mut(&mut self) -> &mut TableSelector {
         &mut self.table_selector
     }
 
-    pub fn get_selected_table_view(&self) -> Result<&TableView> {
+    pub fn selected_table_view(&self) -> Result<&TableView> {
         let index = self
             .table_selector
-            .get_selected_index()
+            .selected_index()
             .ok_or_eyre(StrataError::NoTableSelected)?;
 
         self.table_view_list
@@ -53,33 +53,33 @@ impl App {
             .ok_or_eyre(StrataError::TableNotFound(index.to_string()))
     }
 
-    pub fn get_selected_table_view_mut(&mut self) -> Result<&mut TableView> {
+    pub fn selected_table_view_mut(&mut self) -> Result<&mut TableView> {
         let index = self
             .table_selector
-            .get_selected_index()
+            .selected_index()
             .ok_or_eyre(StrataError::NoTableSelected)?;
         self.table_view_list
             .get_mut(index)
             .ok_or_eyre(StrataError::TableNotFound(index.to_string()))
     }
 
-    pub fn get_command(&self) -> Option<&AppCommand> {
+    pub fn command(&self) -> Option<&AppCommand> {
         self.command.as_ref()
     }
 
-    pub fn get_command_mut(&mut self) -> Option<&mut AppCommand> {
+    pub fn command_mut(&mut self) -> Option<&mut AppCommand> {
         self.command.as_mut()
     }
 
-    pub fn get_command_name(&self) -> Option<&str> {
-        self.command.as_ref().map(AppCommand::get_command_name)
+    pub fn command_name(&self) -> Option<&str> {
+        self.command.as_ref().map(AppCommand::command_name)
     }
 
-    pub fn get_error_popup(&self) -> &ErrorPopup {
+    pub fn error_popup(&self) -> &ErrorPopup {
         &self.error_popup
     }
 
-    pub fn get_error_popup_mut(&mut self) -> &mut ErrorPopup {
+    pub fn error_popup_mut(&mut self) -> &mut ErrorPopup {
         &mut self.error_popup
     }
 
@@ -104,7 +104,7 @@ impl App {
 
         let table_name = TableName::from(table_name)?;
 
-        self.get_table_selector_mut().select_by_name(&table_name)?;
+        self.table_selector_mut().select_by_name(&table_name)?;
         self.display_focus = DisplayFocus::TableView;
         Ok(self)
     }
@@ -171,7 +171,7 @@ impl App {
 
         let index = self
             .table_selector
-            .get_selected_index()
+            .selected_index()
             .ok_or_eyre(StrataError::NoTableSelected)?;
 
         self.table_selector.remove_table(index)?;
@@ -257,8 +257,8 @@ mod tests {
         let mut app = setup_focus_table_list_app();
 
         app.focus_table_view_by_name("table2").unwrap();
-        assert_eq!(app.get_display_focus().to_string(), "TableView");
-        assert_eq!(app.table_selector.get_selected_index(), Some(1));
+        assert_eq!(app.display_focus().to_string(), "TableView");
+        assert_eq!(app.table_selector.selected_index(), Some(1));
     }
 
     #[test]
@@ -268,12 +268,12 @@ mod tests {
         app.focus_command(command);
 
         assert_eq!(
-            app.get_display_focus(),
+            app.display_focus(),
             &DisplayFocus::Command(Box::new(DisplayFocus::TableSelector))
         );
-        assert_eq!(app.get_command_name(), Some("test"));
+        assert_eq!(app.command_name(), Some("test"));
         assert_eq!(
-            DisplayFocus::last_focus(app.get_display_focus()),
+            DisplayFocus::last_focus(app.display_focus()),
             DisplayFocus::TableSelector
         );
         assert!(app.execute_command().is_ok());

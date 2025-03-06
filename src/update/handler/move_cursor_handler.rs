@@ -6,14 +6,14 @@ use crate::{
 };
 
 pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Result<()> {
-    match app.get_display_focus() {
+    match app.display_focus() {
         DisplayFocus::TableSelector => match direction {
             MoveDirection::Up => {
-                app.get_table_selector_mut().select_prev();
+                app.table_selector_mut().select_prev();
                 Ok(())
             }
             MoveDirection::Down => {
-                app.get_table_selector_mut().select_next();
+                app.table_selector_mut().select_next();
                 Ok(())
             }
             MoveDirection::Right => {
@@ -23,7 +23,7 @@ pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Res
             _ => Ok(()),
         },
         DisplayFocus::TableView => {
-            let tv = app.get_selected_table_view_mut()?;
+            let tv = app.selected_table_view_mut()?;
 
             match direction {
                 MoveDirection::Up => tv.move_selector(-1, 0)?,

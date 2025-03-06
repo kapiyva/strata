@@ -32,15 +32,15 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::Edit => handle_edit(app),
         Message::HyperEdit => handle_hyper_edit(app),
         Message::Input(c) => {
-            app.get_command_mut()
+            app.command_mut()
                 .ok_or_eyre(StrataError::CommandNotFound)?
                 .input(c);
             Ok(())
         }
         Message::BackSpace => {
-            app.get_command_mut()
+            app.command_mut()
                 .ok_or_eyre(StrataError::CommandNotFound)?
-                .pop_input();
+                .pop();
             Ok(())
         }
         Message::Delete => handle_delete(app),

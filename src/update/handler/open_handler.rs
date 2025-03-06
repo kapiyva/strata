@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub(crate) fn handle_open(app: &mut App) -> Result<()> {
-    match app.get_display_focus() {
+    match app.display_focus() {
         DisplayFocus::TableSelector => {
             app.focus_command(AppCommand::new(
                 "Open File",

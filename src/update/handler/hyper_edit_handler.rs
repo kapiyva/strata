@@ -6,7 +6,7 @@ use crate::model::{
 };
 
 pub(crate) fn handle_hyper_edit(app: &mut App) -> Result<()> {
-    match app.get_display_focus() {
+    match app.display_focus() {
         DisplayFocus::TableView => {
             app.focus_command(gen_command());
             Ok(())
@@ -20,9 +20,9 @@ fn gen_command() -> AppCommand {
         "Edit Table Header",
         "",
         Box::new(|input, app| {
-            let tv = app.get_selected_table_view_mut()?;
+            let tv = app.selected_table_view_mut()?;
             let (_, col) = tv
-                .get_selector_index()
+                .selected_index()
                 .ok_or_else(|| eyre::eyre!("No column selected"))?;
 
             tv.update_header(col, input)?;

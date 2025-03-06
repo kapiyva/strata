@@ -61,22 +61,22 @@ impl TableView {
         })
     }
 
-    pub fn get_header(&self) -> &Vec<String> {
+    pub fn header(&self) -> &Vec<String> {
         &self.header
     }
 
-    pub fn get_selector_index(&self) -> Option<(usize, usize)> {
+    pub fn selected_index(&self) -> Option<(usize, usize)> {
         self.cell_selector.selected_cell()
     }
 
-    pub fn get_cell_value(&self, row: usize, col: usize) -> Result<&str> {
+    pub fn cell_value(&self, row: usize, col: usize) -> Result<&str> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;
 
         Ok(&self.rows[row][col])
     }
 
-    pub fn get_header_widths(&self) -> Vec<Constraint> {
+    pub fn header_widths(&self) -> Vec<Constraint> {
         vec![Constraint::Length(3)]
             .into_iter()
             .chain(self.header.iter().enumerate().map(|(index, header)| {
@@ -222,7 +222,7 @@ impl TableView {
 impl StrataComponent for TableView {
     fn render(&self, frame: &mut Frame, area: Rect, is_focused: bool) {
         let (selected_row, selected_col) = self
-            .get_selector_index()
+            .selected_index()
             .map(|(row, col)| (Some(row), Some(col)))
             .unwrap_or((None, None));
 
@@ -250,7 +250,7 @@ impl StrataComponent for TableView {
             Style::default()
         };
         let cell_style = |(row, col): (usize, usize)| -> Style {
-            if Some((row, col)) == self.get_selector_index() {
+            if Some((row, col)) == self.selected_index() {
                 return Style::default().bg(Color::LightBlue);
             };
             Style::default()
@@ -265,7 +265,7 @@ impl StrataComponent for TableView {
             )
         });
 
-        let table = Table::new(body, self.get_header_widths())
+        let table = Table::new(body, self.header_widths())
             .block(Block::default().title("Table").borders(Borders::ALL))
             .style(if is_focused {
                 Style::default().bold().fg(Color::LightYellow)
@@ -337,32 +337,32 @@ mod tests {
     fn test_move_selector() {
         let mut tv = TableView::new();
         tv.move_selector(1, 1).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((1, 1)));
+        assert_eq!(tv.selected_index(), Some((1, 1)));
 
         tv.move_selector(1, 1).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((2, 2)));
+        assert_eq!(tv.selected_index(), Some((2, 2)));
 
         tv.move_selector(-1, -1).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((1, 1)));
+        assert_eq!(tv.selected_index(), Some((1, 1)));
 
         tv.move_selector(-1, -1).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((0, 0)));
+        assert_eq!(tv.selected_index(), Some((0, 0)));
 
         tv.move_selector(-1, -1).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((0, 0)));
+        assert_eq!(tv.selected_index(), Some((0, 0)));
     }
 
     #[test]
     fn test_select_cell() {
         let mut tv = TableView::new();
         tv.select_cell(1, 1).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((1, 1)));
+        assert_eq!(tv.selected_index(), Some((1, 1)));
 
         tv.select_cell(2, 2).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((2, 2)));
+        assert_eq!(tv.selected_index(), Some((2, 2)));
 
         tv.select_cell(0, 0).unwrap();
-        assert_eq!(tv.get_selector_index(), Some((0, 0)));
+        assert_eq!(tv.selected_index(), Some((0, 0)));
     }
 
     #[test]

@@ -55,15 +55,15 @@ impl TableSelector {
         }
     }
 
-    pub fn get_selected_index(&self) -> Option<usize> {
+    pub fn selected_index(&self) -> Option<usize> {
         self.selected
     }
 
-    pub fn get_index_by_name(&self, table_name: &TableName) -> Option<usize> {
+    pub fn selected_index_by_name(&self, table_name: &TableName) -> Option<usize> {
         self.table_list.iter().position(|t| t == table_name)
     }
 
-    pub fn get_selected_table_name(&self) -> Option<&TableName> {
+    pub fn selected_table_name(&self) -> Option<&TableName> {
         self.selected.map(|i| &self.table_list[i])
     }
 
@@ -71,7 +71,7 @@ impl TableSelector {
         self.table_list.is_empty()
     }
 
-    /// Add new table to the list and select it
+    /// Add new table to list and select it
     pub fn push_table(&mut self, table: TableName) -> Result<&mut Self> {
         if self.table_list.contains(&table) {
             bail!(StrataError::TableNameDuplicate(table.to_string()));
@@ -95,7 +95,7 @@ impl TableSelector {
         self.selected = if self.table_list.is_empty() {
             None
         } else {
-            self.get_selected_index()
+            self.selected_index()
                 .map(|i| i.min(self.table_list.len() - 1))
         };
         Ok(self)
@@ -137,7 +137,7 @@ impl TableSelector {
     }
 
     pub fn select_by_name(&mut self, table_name: &TableName) -> Result<&mut Self> {
-        self.selected = self.get_index_by_name(table_name);
+        self.selected = self.selected_index_by_name(table_name);
 
         if self.selected.is_none() {
             bail!(StrataError::TableNotFound(table_name.to_string()));
@@ -198,13 +198,13 @@ mod tests {
     fn test_get_index() {
         let sl = setup();
 
-        assert_eq!(sl.get_selected_index().unwrap(), 0);
+        assert_eq!(sl.selected_index().unwrap(), 0);
         assert_eq!(
-            sl.get_index_by_name(&TableName::from("table1").unwrap()),
+            sl.selected_index_by_name(&TableName::from("table1").unwrap()),
             Some(0)
         );
         assert_eq!(
-            sl.get_index_by_name(&TableName::from("table2").unwrap()),
+            sl.selected_index_by_name(&TableName::from("table2").unwrap()),
             Some(1)
         );
     }
@@ -215,17 +215,17 @@ mod tests {
 
         // check down table selector
         let sl = sl.select_next();
-        assert_eq!(sl.get_selected_index(), Some(1),);
+        assert_eq!(sl.selected_index(), Some(1),);
         // check out of bound
         let sl = sl.select_next();
-        assert_eq!(sl.get_selected_index(), Some(1),);
+        assert_eq!(sl.selected_index(), Some(1),);
 
         // check up table selector
         let sl = sl.select_prev();
-        assert_eq!(sl.get_selected_index(), Some(0),);
+        assert_eq!(sl.selected_index(), Some(0),);
         // check out of bound
         let sl = sl.select_prev();
-        assert_eq!(sl.get_selected_index(), Some(0),);
+        assert_eq!(sl.selected_index(), Some(0),);
     }
 
     #[test]
@@ -234,11 +234,11 @@ mod tests {
 
         sl.push_table(TableName::from("table3").unwrap()).unwrap();
         assert_eq!(sl.get_table_list().len(), 3);
-        assert_eq!(sl.get_selected_index(), Some(2));
+        assert_eq!(sl.selected_index(), Some(2));
 
         sl.push_table(TableName::from("table4").unwrap()).unwrap();
         assert_eq!(sl.get_table_list().len(), 4);
-        assert_eq!(sl.get_selected_index(), Some(3));
+        assert_eq!(sl.selected_index(), Some(3));
     }
 
     #[test]
@@ -248,10 +248,10 @@ mod tests {
 
         let sl = sl.remove_table(1).unwrap();
         assert_eq!(sl.get_table_list().len(), 1);
-        assert_eq!(sl.get_selected_index(), Some(0));
+        assert_eq!(sl.selected_index(), Some(0));
 
         let sl = sl.remove_table(0).unwrap();
         assert_eq!(sl.get_table_list().len(), 0);
-        assert_eq!(sl.get_selected_index(), None);
+        assert_eq!(sl.selected_index(), None);
     }
 }

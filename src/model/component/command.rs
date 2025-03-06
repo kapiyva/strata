@@ -36,7 +36,7 @@ impl AppCommand {
         }
     }
 
-    pub fn get_command_name(&self) -> &str {
+    pub fn command_name(&self) -> &str {
         &self.command_name
     }
 
@@ -49,12 +49,12 @@ impl AppCommand {
         self
     }
 
-    pub fn pop_input(&mut self) -> &mut Self {
+    pub fn pop(&mut self) -> &mut Self {
         self.input.pop();
         self
     }
 
-    pub fn clear_input(&mut self) -> &mut Self {
+    pub fn clear(&mut self) -> &mut Self {
         self.input.clear();
         self
     }
