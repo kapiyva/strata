@@ -10,6 +10,7 @@ use crate::error::StrataError;
 
 use super::component::{
     command::AppCommand,
+    error_popup::ErrorPopup,
     table_selector::{TableName, TableSelector, INITIAL_TABLE_NAME},
     table_view::TableView,
 };
@@ -21,7 +22,7 @@ pub struct App {
     table_selector: TableSelector,
     table_view_list: Vec<TableView>,
     command: Option<AppCommand>,
-    error_message: Vec<String>,
+    error_popup: ErrorPopup,
 }
 
 impl App {
@@ -74,8 +75,12 @@ impl App {
         self.command.as_ref().map(AppCommand::get_command_name)
     }
 
-    pub fn get_error_message(&self) -> &Vec<String> {
-        &self.error_message
+    pub fn get_error_popup(&self) -> &ErrorPopup {
+        &self.error_popup
+    }
+
+    pub fn get_error_popup_mut(&mut self) -> &mut ErrorPopup {
+        &mut self.error_popup
     }
 
     pub fn focus_table_list(&mut self) -> &mut Self {
@@ -111,7 +116,7 @@ impl App {
     }
 
     pub fn focus_error(&mut self) -> &mut Self {
-        if !self.error_message.is_empty() {
+        if !self.error_popup.is_empty() {
             self.display_focus = DisplayFocus::Error(Box::new(self.display_focus.clone()));
         }
         self
@@ -185,14 +190,6 @@ impl App {
 
     pub fn clear_command(&mut self) {
         self.command = None;
-    }
-
-    pub fn push_error_message(&mut self, message: String) {
-        self.error_message.push(message);
-    }
-
-    pub fn clear_error_message(&mut self) {
-        self.error_message.clear();
     }
 }
 

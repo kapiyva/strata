@@ -45,7 +45,7 @@ fn main() -> Result<()> {
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
     loop {
         if let Err(e) = terminal.draw(|f| ui(f, app)) {
-            app.push_error_message(e.to_string());
+            app.get_error_popup_mut().push(e.to_string());
             app.focus_error();
         }
         // handle key event
@@ -55,7 +55,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                 break;
             }
             if let Err(e) = update(app, message) {
-                app.push_error_message(e.to_string());
+                app.get_error_popup_mut().push(e.to_string());
                 app.focus_error();
             }
         }

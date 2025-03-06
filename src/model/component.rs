@@ -1,7 +1,7 @@
 use ratatui::{layout::Rect, Frame};
 
 pub mod command;
-// pub mod error;
+pub mod error_popup;
 pub mod popup;
 pub mod table_selector;
 pub mod table_view;
