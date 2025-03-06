@@ -14,7 +14,10 @@ pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
             app.execute_command()?;
             Ok(())
         }
-        DisplayFocus::TableSelector => app.focus_table_view(),
+        DisplayFocus::TableSelector => {
+            app.focus_table_view()?;
+            Ok(())
+        }
         DisplayFocus::TableView => {
             app.focus_command(AppCommand::new(
                 "Edit Cell",
@@ -31,8 +34,9 @@ pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
             Ok(())
         }
         DisplayFocus::Error(_) => {
-            app.clear_error_message();
-            app.focus_last()
+            app.get_error_popup_mut().clear();
+            app.focus_last()?;
+            Ok(())
         }
         _ => Ok(()),
     }

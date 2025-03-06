@@ -16,7 +16,10 @@ pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Res
                 app.get_table_selector_mut().select_next();
                 Ok(())
             }
-            MoveDirection::Right => app.focus_table_view(),
+            MoveDirection::Right => {
+                app.focus_table_view()?;
+                Ok(())
+            }
             _ => Ok(()),
         },
         DisplayFocus::TableView => {

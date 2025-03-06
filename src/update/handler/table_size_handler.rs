@@ -24,7 +24,8 @@ pub fn handle_expand_col(app: &mut App) -> Result<()> {
         "",
         Box::new(|input, app| {
             app.get_selected_table_view_mut()?.expand_col(&input)?;
-            app.focus_last()
+            app.focus_last()?;
+            Ok(())
         }),
     ));
     Ok(())

@@ -21,7 +21,10 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
     match message {
         Message::Enter => handle_enter(app),
         Message::Cancel => handle_cancel(app),
-        Message::Exiting => Ok(app.focus_exit()),
+        Message::Exiting => {
+            app.focus_exit();
+            Ok(())
+        }
         Message::Move(direction) => handle_move_cursor(app, direction),
         Message::Jump => handle_jump(app),
         Message::Add => handle_add(app),
