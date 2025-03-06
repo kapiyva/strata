@@ -1,4 +1,3 @@
-mod render_error;
 mod render_exit;
 mod render_footer;
 
@@ -6,9 +5,8 @@ use ratatui::{
     layout::{Constraint, Layout, Rect},
     Frame,
 };
-use render_error::render_error;
 use render_exit::render_exit;
-use render_footer::{render_footer, RenderFooterProps};
+use render_footer::render_footer;
 
 use crate::model::{
     app::{state::DisplayFocus, App},
@@ -37,13 +35,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             app.get_display_focus() == &DisplayFocus::TableView,
         );
     };
-    render_footer(
-        frame,
-        footer_area,
-        RenderFooterProps {
-            display_focus: app.get_display_focus(),
-        },
-    );
+    render_footer(frame, footer_area, app.get_display_focus());
 
     // render overlay
     match app.get_display_focus() {
@@ -59,7 +51,14 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             };
         }
         DisplayFocus::Error(_) => {
-            render_error(frame, app.get_error_message());
+            let error_area = Rect {
+                x: frame.area().width / 4,
+                y: frame.area().height / 3,
+                width: frame.area().width / 2,
+                height: app.get_error_popup().size() as u16 + 6,
+            };
+            // render_error(frame, error_area, app.get_error_message());
+            app.get_error_popup().render(frame, error_area, true);
         }
         DisplayFocus::Exit(_) => {
             render_exit(frame);
