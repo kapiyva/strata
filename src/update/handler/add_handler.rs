@@ -25,8 +25,6 @@ pub(crate) fn handle_add(app: &mut App) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use std::mem;
-
     use crate::model::component::table_selector::TableName;
 
     use super::*;
@@ -34,7 +32,7 @@ mod tests {
     fn input(app: &mut App, input: &str) {
         let command = app.get_command_mut().unwrap();
         for c in input.chars() {
-            *command = mem::take(command).input(c);
+            command.input(c);
         }
     }
 

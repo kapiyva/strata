@@ -44,25 +44,19 @@ impl AppCommand {
         (self.function)(&self.input, app)
     }
 
-    pub fn input(self, c: char) -> Self {
-        let mut input = self.input;
-        input.push(c);
-
-        Self { input, ..self }
+    pub fn input(&mut self, c: char) -> &mut Self {
+        self.input.push(c);
+        self
     }
 
-    pub fn pop_input(self) -> Self {
-        let mut input = self.input.clone();
-        input.pop();
-
-        Self { input, ..self }
+    pub fn pop_input(&mut self) -> &mut Self {
+        self.input.pop();
+        self
     }
 
-    pub fn clear_input(self) -> Self {
-        Self {
-            input: String::new(),
-            ..self
-        }
+    pub fn clear_input(&mut self) -> &mut Self {
+        self.input.clear();
+        self
     }
 }
 

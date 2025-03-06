@@ -1,5 +1,3 @@
-use std::mem;
-
 use eyre::Result;
 
 use crate::{
@@ -11,13 +9,11 @@ pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Res
     match app.get_display_focus() {
         DisplayFocus::TableSelector => match direction {
             MoveDirection::Up => {
-                let sl = app.get_table_selector_mut();
-                *sl = mem::take(sl).select_prev();
+                app.get_table_selector_mut().select_prev();
                 Ok(())
             }
             MoveDirection::Down => {
-                let sl = app.get_table_selector_mut();
-                *sl = mem::take(sl).select_prev();
+                app.get_table_selector_mut().select_next();
                 Ok(())
             }
             MoveDirection::Right => app.focus_table_view(),
@@ -25,13 +21,12 @@ pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Res
         },
         DisplayFocus::TableView => {
             let tv = app.get_selected_table_view_mut()?;
-            let owned_tv = mem::take(tv);
 
-            *tv = match direction {
-                MoveDirection::Up => owned_tv.move_selector(-1, 0)?,
-                MoveDirection::Down => owned_tv.move_selector(1, 0)?,
-                MoveDirection::Left => owned_tv.move_selector(0, -1)?,
-                MoveDirection::Right => owned_tv.move_selector(0, 1)?,
+            match direction {
+                MoveDirection::Up => tv.move_selector(-1, 0)?,
+                MoveDirection::Down => tv.move_selector(1, 0)?,
+                MoveDirection::Left => tv.move_selector(0, -1)?,
+                MoveDirection::Right => tv.move_selector(0, 1)?,
             };
             Ok(())
         }

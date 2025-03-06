@@ -1,5 +1,3 @@
-use std::mem;
-
 use eyre::{OptionExt, Result};
 
 use crate::{
@@ -34,9 +32,9 @@ fn edit_table_name_command() -> AppCommand {
                 .get_table_selector()
                 .get_selected_index()
                 .ok_or_eyre(StrataError::NoTableSelected)?;
-            let sl = app.get_table_selector_mut();
 
-            *sl = mem::take(sl).update_table(selected_index, table_name)?;
+            app.get_table_selector_mut()
+                .update_table(selected_index, table_name)?;
             Ok(())
         }),
     )
@@ -51,7 +49,8 @@ fn edit_cell_command() -> AppCommand {
             let (row, col) = tv
                 .get_selector_index()
                 .ok_or_else(|| eyre::eyre!("No cell selected"))?;
-            *tv = mem::take(tv).update_cell(row, col, input)?;
+
+            tv.update_cell(row, col, input)?;
             Ok(())
         }),
     )

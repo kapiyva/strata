@@ -1,5 +1,3 @@
-use std::mem;
-
 use eyre::{OptionExt, Result};
 
 use crate::{
@@ -26,7 +24,7 @@ pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
                     let (row, col) = tv
                         .get_selector_index()
                         .ok_or_eyre(StrataError::NoCellSelected)?;
-                    *tv = mem::take(tv).update_cell(row, col, input)?;
+                    tv.update_cell(row, col, input)?;
                     Ok(())
                 }),
             ));

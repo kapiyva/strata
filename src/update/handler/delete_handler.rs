@@ -1,5 +1,3 @@
-use std::mem;
-
 use eyre::Result;
 
 use crate::model::app::{state::DisplayFocus, App};
@@ -12,8 +10,8 @@ pub(crate) fn handle_delete(app: &mut App) -> Result<()> {
             let (row, col) = tv
                 .get_selector_index()
                 .ok_or_else(|| eyre::eyre!("No cell selected"))?;
-            *tv = mem::take(tv).update_cell(row, col, "")?;
 
+            tv.update_cell(row, col, "")?;
             Ok(())
         }
         _ => Ok(()),

@@ -91,31 +91,23 @@ impl TableView {
             .collect()
     }
 
-    pub fn switch_headers(self) -> Result<Self> {
+    pub fn switch_headers(&mut self) -> Result<&mut Self> {
         let has_header = !self.has_header;
         match has_header {
             true => {
-                let mut rows = self.rows;
-                let _ = rows.remove(0);
-                Ok(Self {
-                    has_header,
-                    rows,
-                    ..self
-                })
+                // let mut rows = self.rows;
+                self.rows.remove(0);
+                Ok(self)
             }
             false => {
-                let mut rows = self.rows;
-                rows.insert(0, self.header.clone());
-                Ok(Self {
-                    has_header,
-                    rows,
-                    ..self
-                })
+                // let mut rows = self.rows;
+                self.rows.insert(0, self.header.clone());
+                Ok(self)
             }
         }
     }
 
-    pub fn move_selector(self, row_move: isize, col_move: isize) -> Result<Self> {
+    pub fn move_selector(&mut self, row_move: isize, col_move: isize) -> Result<&mut Self> {
         let (selected_row, selected_col) = self
             .cell_selector
             .selected_cell()
@@ -127,98 +119,75 @@ impl TableView {
             .saturating_add_signed(col_move)
             .min(self.max_col_index());
 
-        Ok(Self {
-            cell_selector: self
-                .cell_selector
-                .with_selected_cell(Some((new_row, new_col))),
-            ..self
-        })
+        self.cell_selector.select_cell(Some((new_row, new_col)));
+        Ok(self)
     }
 
-    pub fn select_cell(self, row: usize, col: usize) -> Result<Self> {
+    pub fn select_cell(&mut self, row: usize, col: usize) -> Result<&mut Self> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;
 
-        Ok(Self {
-            cell_selector: self.cell_selector.with_selected_cell(Some((row, col))),
-            ..self
-        })
+        self.cell_selector.select_cell(Some((row, col)));
+        Ok(self)
     }
 
-    pub fn update_header(self, col: usize, value: &str) -> Result<Self> {
+    pub fn update_header(&mut self, col: usize, value: &str) -> Result<&mut Self> {
         self.is_valid_col_index(col)?;
         if !self.has_header {
             bail!(StrataError::TableHasNoHeader);
         }
 
-        let mut header = self.header;
-        if let Some(h) = header.get_mut(col) {
+        if let Some(h) = self.header.get_mut(col) {
             *h = value.to_string();
         }
 
-        Ok(Self { header, ..self })
+        Ok(self)
     }
 
-    pub fn update_cell(self, row: usize, col: usize, value: &str) -> Result<Self> {
+    pub fn update_cell(&mut self, row: usize, col: usize, value: &str) -> Result<&mut Self> {
         self.is_valid_row_index(row)?;
         self.is_valid_col_index(col)?;
 
-        let mut rows = self.rows;
-        if let Some(r) = rows.get_mut(row) {
+        if let Some(r) = self.rows.get_mut(row) {
             if let Some(c) = r.get_mut(col) {
                 *c = value.to_string();
             }
         }
 
-        Ok(Self { rows, ..self })
+        Ok(self)
     }
 
-    pub fn expand_row(self) -> Result<Self> {
-        let mut rows = self.rows;
-        rows.push(vec!["".to_string(); self.header.len()]);
+    pub fn expand_row(&mut self) -> Result<&mut Self> {
+        self.rows.push(vec!["".to_string(); self.header.len()]);
 
-        Ok(Self { rows, ..self })
+        Ok(self)
     }
 
-    pub fn collapse_row(self, row: usize) -> Result<Self> {
+    pub fn collapse_row(&mut self, row: usize) -> Result<&mut Self> {
         self.is_valid_row_index(row)?;
 
-        let mut rows = self.rows;
-        rows.remove(row);
-        Ok(Self { rows, ..self })
+        self.rows.remove(row);
+        Ok(self)
     }
 
-    pub fn expand_col(self, new_header: &str) -> Result<Self> {
-        let mut header = self.header;
-        header.push(new_header.to_string());
-        let mut rows = self.rows;
-        for row in rows.iter_mut() {
+    pub fn expand_col(&mut self, new_header: &str) -> Result<&mut Self> {
+        self.header.push(new_header.to_string());
+        for row in self.rows.iter_mut() {
             row.push("".to_string());
         }
 
-        Ok(Self {
-            header,
-            rows,
-            ..self
-        })
+        Ok(self)
     }
 
-    pub fn collapse_col(self, col: usize) -> Result<Self> {
+    pub fn collapse_col(&mut self, col: usize) -> Result<&mut Self> {
         self.is_valid_col_index(col)?;
 
-        let mut header = self.header;
-        header.remove(col);
-
-        let mut rows = self.rows;
-        for row in rows.iter_mut() {
+        self.header.remove(col);
+        for row in self.rows.iter_mut() {
             row.remove(col);
         }
 
-        Ok(Self {
-            header,
-            rows,
-            ..self
-        })
+        Ok(self)
     }
 
     fn max_row_index(&self) -> usize {
@@ -354,7 +323,8 @@ mod tests {
 
     #[test]
     fn test_switch_headers() {
-        let tv = TableView::new().switch_headers().unwrap();
+        let mut tv = TableView::new();
+        tv.switch_headers().unwrap();
         assert_eq!(tv.has_header, false);
         assert_eq!(tv.rows.get(0), Some(&tv.header));
 
@@ -365,78 +335,92 @@ mod tests {
 
     #[test]
     fn test_move_selector() {
-        let tv = TableView::new().move_selector(1, 1).unwrap();
+        let mut tv = TableView::new();
+        tv.move_selector(1, 1).unwrap();
         assert_eq!(tv.get_selector_index(), Some((1, 1)));
 
-        let tv = tv.move_selector(1, 1).unwrap();
+        tv.move_selector(1, 1).unwrap();
         assert_eq!(tv.get_selector_index(), Some((2, 2)));
 
-        let tv = tv.move_selector(-1, -1).unwrap();
+        tv.move_selector(-1, -1).unwrap();
         assert_eq!(tv.get_selector_index(), Some((1, 1)));
 
-        let tv = tv.move_selector(-1, -1).unwrap();
+        tv.move_selector(-1, -1).unwrap();
         assert_eq!(tv.get_selector_index(), Some((0, 0)));
 
-        let tv = tv.move_selector(-1, -1).unwrap();
+        tv.move_selector(-1, -1).unwrap();
         assert_eq!(tv.get_selector_index(), Some((0, 0)));
     }
 
     #[test]
     fn test_select_cell() {
-        let tv = TableView::new().select_cell(1, 1).unwrap();
+        let mut tv = TableView::new();
+        tv.select_cell(1, 1).unwrap();
         assert_eq!(tv.get_selector_index(), Some((1, 1)));
 
-        let tv = tv.select_cell(2, 2).unwrap();
+        tv.select_cell(2, 2).unwrap();
         assert_eq!(tv.get_selector_index(), Some((2, 2)));
 
-        let tv = tv.select_cell(0, 0).unwrap();
+        tv.select_cell(0, 0).unwrap();
         assert_eq!(tv.get_selector_index(), Some((0, 0)));
     }
 
     #[test]
     fn test_update_header() {
-        let tv = TableView::new().update_header(1, "new_header").unwrap();
+        let mut tv = TableView::new();
+        tv.update_header(1, "new_header").unwrap();
         assert_eq!(tv.header[1], "new_header");
 
-        let tv = tv.update_header(0, "new_header").unwrap();
+        tv.update_header(0, "new_header").unwrap();
         assert_eq!(tv.header[0], "new_header");
 
-        let tv = tv.switch_headers().unwrap().update_header(0, "new_header");
+        let tv = tv
+            .switch_headers()
+            .and_then(|tv| tv.update_header(0, "new_header"));
         assert!(tv.is_err());
     }
 
     #[test]
     fn test_update_cell() {
-        let tv = TableView::new().update_cell(1, 1, "new_value").unwrap();
+        let mut tv = TableView::new();
+        tv.update_cell(1, 1, "new_value").unwrap();
         assert_eq!(tv.rows[1][1], "new_value");
 
-        let tv = tv.update_cell(0, 0, "new_value").unwrap();
+        tv.update_cell(0, 0, "new_value").unwrap();
         assert_eq!(tv.rows[0][0], "new_value");
     }
 
     #[test]
     fn test_expand_row() {
-        let tv = TableView::new().expand_row().unwrap();
+        let mut tv = TableView::new();
+        tv.expand_row().unwrap();
+
         assert_eq!(tv.rows.len(), INITIAL_TABLE_SIZE + 1);
         assert_eq!(tv.rows[INITIAL_TABLE_SIZE].len(), INITIAL_TABLE_SIZE);
     }
 
     #[test]
     fn test_collapse_row() {
-        let tv = TableView::new().collapse_row(1).unwrap();
+        let mut tv = TableView::new();
+        tv.collapse_row(1).unwrap();
+
         assert_eq!(tv.rows.len(), INITIAL_TABLE_SIZE - 1);
     }
 
     #[test]
     fn test_expand_col() {
-        let tv = TableView::new().expand_col("new_header").unwrap();
+        let mut tv = TableView::new();
+        tv.expand_col("new_header").unwrap();
+
         assert_eq!(tv.header.len(), INITIAL_TABLE_SIZE + 1);
         assert_eq!(tv.rows[0].len(), INITIAL_TABLE_SIZE + 1);
     }
 
     #[test]
     fn test_collapse_col() {
-        let tv = TableView::new().collapse_col(1).unwrap();
+        let mut tv = TableView::new();
+        tv.collapse_col(1).unwrap();
+
         assert_eq!(tv.header.len(), INITIAL_TABLE_SIZE - 1);
         assert_eq!(tv.rows[0].len(), INITIAL_TABLE_SIZE - 1);
     }

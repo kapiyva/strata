@@ -1,5 +1,3 @@
-use std::mem;
-
 use eyre::{bail, OptionExt, Result};
 
 use crate::{
@@ -29,13 +27,12 @@ fn gen_command() -> AppCommand {
         "",
         Box::new(|input, app| {
             let index_str = input.to_string();
-            let tv = app.get_selected_table_view_mut()?;
             let (row, col) = index_str
                 .split_once(" ")
                 .map(|(row, col)| (row.parse::<usize>(), col.parse::<usize>()))
                 .ok_or_eyre(StrataError::StringParseError(index_str))?;
 
-            *tv = mem::take(tv).select_cell(row?, col?)?;
+            app.get_selected_table_view_mut()?.select_cell(row?, col?)?;
             app.focus_table_view()?;
             Ok(())
         }),

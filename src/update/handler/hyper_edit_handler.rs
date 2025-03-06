@@ -1,5 +1,3 @@
-use std::mem;
-
 use eyre::Result;
 
 use crate::model::{
@@ -27,7 +25,7 @@ fn gen_command() -> AppCommand {
                 .get_selector_index()
                 .ok_or_else(|| eyre::eyre!("No column selected"))?;
 
-            *tv = mem::take(tv).update_header(col, input)?;
+            tv.update_header(col, input)?;
             Ok(())
         }),
     )

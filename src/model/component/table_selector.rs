@@ -72,24 +72,18 @@ impl TableSelector {
     }
 
     /// Add new table to the list and select it
-    pub fn push_table(self, table: TableName) -> Result<Self> {
+    pub fn push_table(&mut self, table: TableName) -> Result<&mut Self> {
         if self.table_list.contains(&table) {
             bail!(StrataError::TableNameDuplicate(table.to_string()));
         }
 
-        let mut table_list = self.table_list;
-        table_list.push(table);
+        self.table_list.push(table);
+        self.selected = Some(self.table_list.len().saturating_sub(1));
 
-        let selected = Some(table_list.len().saturating_sub(1));
-
-        Ok(Self {
-            table_list,
-            selected,
-            ..self
-        })
+        Ok(self)
     }
 
-    pub fn remove_table(self, remove_index: usize) -> Result<Self> {
+    pub fn remove_table(&mut self, remove_index: usize) -> Result<&mut Self> {
         if remove_index > self.table_list.len() {
             bail!(StrataError::IndexOutOfBounds {
                 max: self.table_list.len(),
@@ -97,25 +91,17 @@ impl TableSelector {
             });
         }
 
-        let selected_index = self.get_selected_index();
-        let mut table_list = self.table_list;
-
-        table_list.remove(remove_index);
-
-        let selected = if table_list.is_empty() {
+        self.table_list.remove(remove_index);
+        self.selected = if self.table_list.is_empty() {
             None
         } else {
-            selected_index.map(|i| i.min(table_list.len() - 1))
+            self.get_selected_index()
+                .map(|i| i.min(self.table_list.len() - 1))
         };
-
-        Ok(Self {
-            table_list,
-            selected,
-            ..self
-        })
+        Ok(self)
     }
 
-    pub fn update_table(self, index: usize, table: TableName) -> Result<Self> {
+    pub fn update_table(&mut self, index: usize, table: TableName) -> Result<&mut Self> {
         if index > self.table_list.len() {
             bail!(StrataError::IndexOutOfBounds {
                 max: self.table_list.len(),
@@ -123,49 +109,41 @@ impl TableSelector {
             });
         }
 
-        let mut table_list = self.table_list;
-        table_list[index] = table;
-
-        Ok(Self { table_list, ..self })
+        self.table_list[index] = table;
+        Ok(self)
     }
 
-    pub fn select_next(self) -> Self {
+    pub fn select_next(&mut self) -> &mut Self {
         if self.table_list.is_empty() {
-            return Self {
-                selected: None,
-                ..self
-            };
+            self.selected = None;
+            return self;
         }
 
-        let selected = self
+        self.selected = self
             .selected
             .map(|i| i.saturating_add(1).min(self.table_list.len() - 1))
             .or(Some(0));
-
-        Self { selected, ..self }
+        self
     }
 
-    pub fn select_prev(self) -> Self {
+    pub fn select_prev(&mut self) -> &mut Self {
         if self.table_list.is_empty() {
-            return Self {
-                selected: None,
-                ..self
-            };
+            self.selected = None;
+            return self;
         }
 
-        let selected = self.selected.map(|i| i.saturating_sub(1)).or(Some(0));
-
-        Self { selected, ..self }
+        self.selected = self.selected.map(|i| i.saturating_sub(1)).or(Some(0));
+        self
     }
 
-    pub fn select_by_name(self, table_name: &TableName) -> Result<Self> {
-        let selected = self.get_index_by_name(table_name);
+    pub fn select_by_name(&mut self, table_name: &TableName) -> Result<&mut Self> {
+        self.selected = self.get_index_by_name(table_name);
 
-        if selected.is_none() {
+        if self.selected.is_none() {
             bail!(StrataError::TableNotFound(table_name.to_string()));
         }
 
-        Ok(Self { selected, ..self })
+        Ok(self)
     }
 }
 
@@ -233,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_move_selector() {
-        let sl = setup();
+        let mut sl = setup();
 
         // check down table selector
         let sl = sl.select_next();
@@ -252,13 +230,13 @@ mod tests {
 
     #[test]
     fn test_add_table() {
-        let sl = setup();
+        let mut sl = setup();
 
-        let sl = sl.push_table(TableName::from("table3").unwrap()).unwrap();
+        sl.push_table(TableName::from("table3").unwrap()).unwrap();
         assert_eq!(sl.get_table_list().len(), 3);
         assert_eq!(sl.get_selected_index(), Some(2));
 
-        let sl = sl.push_table(TableName::from("table4").unwrap()).unwrap();
+        sl.push_table(TableName::from("table4").unwrap()).unwrap();
         assert_eq!(sl.get_table_list().len(), 4);
         assert_eq!(sl.get_selected_index(), Some(3));
     }

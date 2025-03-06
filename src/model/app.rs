@@ -1,6 +1,6 @@
 pub mod state;
 
-use std::{ffi::OsStr, mem, path::Path};
+use std::{ffi::OsStr, path::Path};
 
 use color_eyre::eyre::Result;
 use eyre::{bail, OptionExt};
@@ -82,10 +82,6 @@ impl App {
         &self.error_message
     }
 
-    // pub fn get_user_input(&self) -> &str {
-    //     &self.input
-    // }
-
     pub fn focus_table_list(&mut self) {
         self.display_focus = DisplayFocus::TableSelector;
     }
@@ -105,8 +101,8 @@ impl App {
         }
 
         let table_name = TableName::from(table_name)?;
-        self.table_selector = mem::take(&mut self.table_selector).select_by_name(&table_name)?;
 
+        self.get_table_selector_mut().select_by_name(&table_name)?;
         self.display_focus = DisplayFocus::TableView;
         Ok(())
     }
@@ -146,7 +142,7 @@ impl App {
     pub fn add_table(&mut self, table_name_str: &str) -> Result<()> {
         let table_name = TableName::from(table_name_str)?;
 
-        self.table_selector = mem::take(&mut self.table_selector).push_table(table_name)?;
+        self.table_selector.push_table(table_name)?;
         self.table_view_list.push(TableView::new());
         Ok(())
     }
@@ -158,7 +154,7 @@ impl App {
             .map_or(TableName::from(INITIAL_TABLE_NAME), TableName::from)?;
         let new_table = TableView::from_csv(file_path, has_header)?;
 
-        self.table_selector = mem::take(&mut self.table_selector).push_table(table_name)?;
+        self.table_selector.push_table(table_name)?;
         self.table_view_list.push(new_table);
         Ok(())
     }
@@ -167,12 +163,13 @@ impl App {
         if self.table_selector.is_empty() || self.table_view_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
+
         let index = self
             .table_selector
             .get_selected_index()
             .ok_or_eyre(StrataError::NoTableSelected)?;
 
-        self.table_selector = mem::take(&mut self.table_selector).remove_table(index)?;
+        self.table_selector.remove_table(index)?;
         self.table_view_list.remove(index);
         self.display_focus = DisplayFocus::TableSelector;
         Ok(())
@@ -209,7 +206,8 @@ mod tests {
         let table_name_1 = TableName::from("table1").unwrap();
         let table_name_2 = TableName::from("table2").unwrap();
         // create 2x2 table
-        let table_view = TableView::default()
+        let mut table_view = TableView::default();
+        table_view
             .expand_row()
             .and_then(|tv| tv.expand_col("header1"))
             .and_then(|tv| tv.update_cell(0, 0, "value0-0"))
