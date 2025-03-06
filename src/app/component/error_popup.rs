@@ -4,7 +4,9 @@ use ratatui::{
     Frame,
 };
 
-use super::{popup::Popup, StrataComponent};
+use crate::app::base_component::popup::Popup;
+
+use super::{border_style, StrataPopup};
 
 #[derive(Default)]
 pub struct ErrorPopup {
@@ -39,12 +41,18 @@ impl ErrorPopup {
     }
 }
 
-impl StrataComponent for ErrorPopup {
-    fn render(&self, frame: &mut Frame, area: Rect, _is_focused: bool) {
+impl StrataPopup for ErrorPopup {
+    fn render(&self, frame: &mut Frame) {
+        let area = Rect {
+            x: frame.area().width / 4,
+            y: frame.area().height / 3,
+            width: frame.area().width / 2,
+            height: self.error_message.len() as u16 + 6,
+        };
         let popup = Popup {
             title: "Error".into(),
             content: self.error_message.join("\n").into(),
-            style: Style::default(),
+            style: border_style(true),
             title_style: Style::new().white().bold(),
             border_style: Style::default(),
         };

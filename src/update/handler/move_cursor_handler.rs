@@ -1,8 +1,8 @@
 use eyre::Result;
 
 use crate::{
+    app::{display_focus::DisplayFocus, App},
     message::MoveDirection,
-    model::app::{state::DisplayFocus, App},
 };
 
 pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Result<()> {

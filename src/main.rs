@@ -11,8 +11,8 @@ use ratatui::{
     Terminal,
 };
 use strata::{
+    app::{display_focus::DisplayFocus, App},
     message::{Message, MoveDirection},
-    model::app::{state::DisplayFocus, App},
     ui::ui,
     update::update,
 };

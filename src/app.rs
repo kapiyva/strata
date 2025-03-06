@@ -1,27 +1,28 @@
-pub mod state;
+pub mod base_component;
+pub mod component;
+pub mod display_focus;
 
 use std::{ffi::OsStr, path::Path};
 
 use color_eyre::eyre::Result;
+use display_focus::DisplayFocus;
 use eyre::{bail, OptionExt};
-use state::DisplayFocus;
 
 use crate::error::StrataError;
 
-use super::component::{
-    command::AppCommand,
+use component::{
+    command::CommandPopup,
     error_popup::ErrorPopup,
     table_selector::{TableName, TableSelector, INITIAL_TABLE_NAME},
     table_view::TableView,
 };
 
 #[derive(Default)]
-// todo: rearchitect App to use components
 pub struct App {
     display_focus: DisplayFocus,
     table_selector: TableSelector,
     table_view_list: Vec<TableView>,
-    command: Option<AppCommand>,
+    command: Option<CommandPopup>,
     error_popup: ErrorPopup,
 }
 
@@ -63,16 +64,16 @@ impl App {
             .ok_or_eyre(StrataError::TableNotFound(index.to_string()))
     }
 
-    pub fn command(&self) -> Option<&AppCommand> {
+    pub fn command(&self) -> Option<&CommandPopup> {
         self.command.as_ref()
     }
 
-    pub fn command_mut(&mut self) -> Option<&mut AppCommand> {
+    pub fn command_mut(&mut self) -> Option<&mut CommandPopup> {
         self.command.as_mut()
     }
 
     pub fn command_name(&self) -> Option<&str> {
-        self.command.as_ref().map(AppCommand::command_name)
+        self.command.as_ref().map(CommandPopup::command_name)
     }
 
     pub fn error_popup(&self) -> &ErrorPopup {
@@ -109,7 +110,7 @@ impl App {
         Ok(self)
     }
 
-    pub fn focus_command(&mut self, command: AppCommand) -> &mut Self {
+    pub fn focus_command(&mut self, command: CommandPopup) -> &mut Self {
         self.command = Some(command);
         self.display_focus = DisplayFocus::Command(Box::new(self.display_focus.clone()));
         self
@@ -264,7 +265,7 @@ mod tests {
     #[test]
     fn test_focus_command() {
         let mut app = setup_focus_table_list_app();
-        let command = AppCommand::new("test", "", Box::new(|_, _| Ok(())));
+        let command = CommandPopup::new("test", "", Box::new(|_, _| Ok(())));
         app.focus_command(command);
 
         assert_eq!(

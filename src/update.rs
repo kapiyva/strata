@@ -1,6 +1,6 @@
 mod handler;
 
-use crate::{error::StrataError, message::Message, model::app::App};
+use crate::{app::App, error::StrataError, message::Message};
 use eyre::{bail, OptionExt, Result};
 use handler::{
     add_handler::handle_add,

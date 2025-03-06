@@ -5,19 +5,19 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::app::App;
+use crate::app::{base_component::popup::Popup, App};
 
-use super::{popup::Popup, StrataComponent};
+use super::{border_style, StrataPopup};
 
-type CommandFunction = Box<dyn FnOnce(&str, &mut App) -> Result<()>>;
+type Command = Box<dyn FnOnce(&str, &mut App) -> Result<()>>;
 
-pub struct AppCommand {
+pub struct CommandPopup {
     command_name: String,
     input: String,
-    function: CommandFunction,
+    function: Command,
 }
 
-impl Default for AppCommand {
+impl Default for CommandPopup {
     fn default() -> Self {
         Self {
             command_name: String::new(),
@@ -27,9 +27,9 @@ impl Default for AppCommand {
     }
 }
 
-impl AppCommand {
-    pub fn new(command_name: &str, input: &str, function: CommandFunction) -> AppCommand {
-        AppCommand {
+impl CommandPopup {
+    pub fn new(command_name: &str, input: &str, function: Command) -> CommandPopup {
+        CommandPopup {
             command_name: command_name.to_string(),
             input: input.to_string(),
             function,
@@ -60,12 +60,18 @@ impl AppCommand {
     }
 }
 
-impl StrataComponent for AppCommand {
-    fn render(&self, frame: &mut Frame, area: Rect, _is_focused: bool) {
+impl StrataPopup for CommandPopup {
+    fn render(&self, frame: &mut Frame) {
+        let area = Rect {
+            x: frame.area().width / 4,
+            y: frame.area().height / 3,
+            width: frame.area().width / 2,
+            height: 3,
+        };
         let popup = Popup {
             title: self.command_name.clone().into(),
             content: self.input.clone().into(),
-            style: Style::default(),
+            style: border_style(true),
             title_style: Style::new().white().bold(),
             border_style: Style::default(),
         };

@@ -1,6 +1,6 @@
 use eyre::Result;
 
-use crate::model::app::{state::DisplayFocus, App};
+use crate::app::{display_focus::DisplayFocus, App};
 
 pub(crate) fn handle_cancel(app: &mut App) -> Result<()> {
     match app.display_focus() {

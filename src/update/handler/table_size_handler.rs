@@ -1,8 +1,8 @@
 use eyre::Result;
 
 use crate::{
+    app::{component::command::CommandPopup, App},
     error::StrataError,
-    model::{app::App, component::command::AppCommand},
 };
 
 pub fn handle_expand_row(app: &mut App) -> Result<()> {
@@ -19,7 +19,7 @@ pub fn handle_collapse_row(app: &mut App) -> Result<()> {
 }
 
 pub fn handle_expand_col(app: &mut App) -> Result<()> {
-    app.focus_command(AppCommand::new(
+    app.focus_command(CommandPopup::new(
         "Header Name",
         "",
         Box::new(|input, app| {

@@ -3,14 +3,13 @@ use std::path::Path;
 use eyre::{bail, OptionExt, Result};
 use ratatui::{
     layout::{Constraint, Rect},
-    style::{Color, Style, Stylize},
     widgets::{Block, Borders, Cell, Row, Table, TableState},
     Frame,
 };
 
 use crate::error::StrataError;
 
-use super::StrataComponent;
+use super::{border_style, selectable_item_style_factory, StrataComponent};
 
 pub const INITIAL_TABLE_SIZE: usize = 10;
 
@@ -226,52 +225,32 @@ impl StrataComponent for TableView {
             .map(|(row, col)| (Some(row), Some(col)))
             .unwrap_or((None, None));
 
-        let header_style = |col: usize| -> Style {
-            if Some(col) == selected_col {
-                return Style::default().bold().bg(Color::LightBlue);
-            };
-            Style::default().bold()
-        };
+        let cell_style = selectable_item_style_factory(is_focused);
 
-        let header = Row::new(
-            std::iter::once(Cell::from("#")).chain(
-                self.header
-                    .iter()
-                    .enumerate()
-                    .map(|(col, header)| Cell::from(header.clone()).style(header_style(col))),
-            ),
-        )
+        let header = Row::new(std::iter::once(Cell::from("#")).chain(
+            self.header.iter().enumerate().map(|(col, header)| {
+                Cell::from(header.clone()).style(cell_style(Some(col) == selected_col))
+            }),
+        ))
         .bottom_margin(1);
-
-        let index_style = |row: usize| -> Style {
-            if Some(row) == selected_row {
-                return Style::default().bg(Color::LightBlue);
-            };
-            Style::default()
-        };
-        let cell_style = |(row, col): (usize, usize)| -> Style {
-            if Some((row, col)) == self.selected_index() {
-                return Style::default().bg(Color::LightBlue);
-            };
-            Style::default()
-        };
 
         let body = self.rows.iter().enumerate().map(|(row_index, row)| {
             Row::new(
-                std::iter::once(Cell::from(row_index.to_string()).style(index_style(row_index)))
-                    .chain(row.iter().enumerate().map(|(col_index, cell_value)| {
-                        Cell::from(cell_value.clone()).style(cell_style((row_index, col_index)))
-                    })),
+                std::iter::once(
+                    Cell::from(row_index.to_string())
+                        .style(cell_style(Some(row_index) == selected_row)),
+                )
+                .chain(row.iter().enumerate().map(|(col_index, cell_value)| {
+                    Cell::from(cell_value.clone()).style(cell_style(
+                        Some((row_index, col_index)) == self.selected_index(),
+                    ))
+                })),
             )
         });
 
         let table = Table::new(body, self.header_widths())
             .block(Block::default().title("Table").borders(Borders::ALL))
-            .style(if is_focused {
-                Style::default().bold().fg(Color::LightYellow)
-            } else {
-                Style::default()
-            })
+            .style(border_style(is_focused))
             .header(header);
 
         frame.render_stateful_widget(table, area, &mut self.cell_selector.clone());

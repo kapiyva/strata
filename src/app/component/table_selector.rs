@@ -1,12 +1,12 @@
 use eyre::{bail, Result};
 use ratatui::{
-    style::{Color, Style, Stylize},
+    style::{Style, Stylize},
     widgets::{Block, List, ListDirection, ListItem},
 };
 
 use crate::error::StrataError;
 
-use super::StrataComponent;
+use super::{border_style, selectable_item_style_factory, StrataComponent};
 
 pub const INITIAL_TABLE_NAME: &str = "new_table";
 
@@ -149,25 +149,17 @@ impl TableSelector {
 
 impl StrataComponent for TableSelector {
     fn render(&self, frame: &mut ratatui::Frame, area: ratatui::prelude::Rect, is_focused: bool) {
+        let item_style = selectable_item_style_factory(is_focused);
+
         let list_items: Vec<ListItem> = self
             .table_list
             .iter()
             .enumerate()
-            .map(|(i, t)| {
-                ListItem::new(t.to_string()).style(if Some(i) == self.selected {
-                    Style::default().bg(Color::LightBlue)
-                } else {
-                    Style::default()
-                })
-            })
+            .map(|(i, t)| ListItem::new(t.to_string()).style(item_style(Some(i) == self.selected)))
             .collect();
         let list = List::new(list_items)
             .block(Block::bordered().title("List"))
-            .style(if is_focused {
-                Style::default().bold().fg(Color::LightYellow)
-            } else {
-                Style::default()
-            })
+            .style(border_style(is_focused))
             .highlight_style(Style::new().italic())
             .highlight_symbol(">>")
             .repeat_highlight_symbol(true)

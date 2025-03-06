@@ -1,11 +1,12 @@
 use eyre::{OptionExt, Result};
 
 use crate::{
-    error::StrataError,
-    model::{
-        app::{state::DisplayFocus, App},
-        component::{command::AppCommand, table_selector::TableName},
+    app::{
+        component::{command::CommandPopup, table_selector::TableName},
+        display_focus::DisplayFocus,
+        App,
     },
+    error::StrataError,
 };
 
 pub(crate) fn handle_edit(app: &mut App) -> Result<()> {
@@ -22,8 +23,8 @@ pub(crate) fn handle_edit(app: &mut App) -> Result<()> {
     }
 }
 
-fn edit_table_name_command() -> AppCommand {
-    AppCommand::new(
+fn edit_table_name_command() -> CommandPopup {
+    CommandPopup::new(
         "Edit Table Name",
         "",
         Box::new(|input, app| {
@@ -40,8 +41,8 @@ fn edit_table_name_command() -> AppCommand {
     )
 }
 
-fn edit_cell_command() -> AppCommand {
-    AppCommand::new(
+fn edit_cell_command() -> CommandPopup {
+    CommandPopup::new(
         "Edit Cell",
         "",
         Box::new(|input, app| {

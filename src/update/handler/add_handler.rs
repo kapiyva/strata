@@ -1,14 +1,11 @@
 use eyre::Result;
 
-use crate::model::{
-    app::{state::DisplayFocus, App},
-    component::command::AppCommand,
-};
+use crate::app::{component::command::CommandPopup, display_focus::DisplayFocus, App};
 
 pub(crate) fn handle_add(app: &mut App) -> Result<()> {
     match app.display_focus() {
         DisplayFocus::TableSelector => {
-            app.focus_command(AppCommand::new(
+            app.focus_command(CommandPopup::new(
                 "Add Table",
                 "",
                 Box::new(|input, app| {
@@ -25,7 +22,7 @@ pub(crate) fn handle_add(app: &mut App) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::model::component::table_selector::TableName;
+    use crate::app::component::table_selector::TableName;
 
     use super::*;
 

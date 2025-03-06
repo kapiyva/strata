@@ -1,9 +1,6 @@
 use eyre::Result;
 
-use crate::model::{
-    app::{state::DisplayFocus, App},
-    component::command::AppCommand,
-};
+use crate::app::{component::command::CommandPopup, display_focus::DisplayFocus, App};
 
 pub(crate) fn handle_hyper_edit(app: &mut App) -> Result<()> {
     match app.display_focus() {
@@ -15,8 +12,8 @@ pub(crate) fn handle_hyper_edit(app: &mut App) -> Result<()> {
     }
 }
 
-fn gen_command() -> AppCommand {
-    AppCommand::new(
+fn gen_command() -> CommandPopup {
+    CommandPopup::new(
         "Edit Table Header",
         "",
         Box::new(|input, app| {

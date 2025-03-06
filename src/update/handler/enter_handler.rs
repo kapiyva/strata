@@ -1,11 +1,8 @@
 use eyre::{OptionExt, Result};
 
 use crate::{
+    app::{component::command::CommandPopup, display_focus::DisplayFocus, App},
     error::StrataError,
-    model::{
-        app::{state::DisplayFocus, App},
-        component::command::AppCommand,
-    },
 };
 
 pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
@@ -19,7 +16,7 @@ pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
             Ok(())
         }
         DisplayFocus::TableView => {
-            app.focus_command(AppCommand::new(
+            app.focus_command(CommandPopup::new(
                 "Edit Cell",
                 "",
                 Box::new(|input, app| {

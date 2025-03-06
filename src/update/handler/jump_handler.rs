@@ -1,11 +1,8 @@
 use eyre::{bail, OptionExt, Result};
 
 use crate::{
+    app::{component::command::CommandPopup, display_focus::DisplayFocus, App},
     error::StrataError,
-    model::{
-        app::{state::DisplayFocus, App},
-        component::command::AppCommand,
-    },
 };
 
 pub(crate) fn handle_jump(app: &mut App) -> Result<()> {
@@ -21,9 +18,9 @@ pub(crate) fn handle_jump(app: &mut App) -> Result<()> {
     }
 }
 
-fn gen_command() -> AppCommand {
-    AppCommand::new(
-        "Jump",
+fn gen_command() -> CommandPopup {
+    CommandPopup::new(
+        "Jump [input row and col index e.g. 1 2]",
         "",
         Box::new(|input, app| {
             let index_str = input.to_string();

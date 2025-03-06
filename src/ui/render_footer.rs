@@ -5,7 +5,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::model::app::state::DisplayFocus;
+use crate::app::display_focus::DisplayFocus;
 
 pub(super) fn render_footer(frame: &mut Frame, area: Rect, focus: &DisplayFocus) {
     let footer =

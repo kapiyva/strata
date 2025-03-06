@@ -3,17 +3,14 @@ use std::{ffi::OsStr, path::Path};
 use eyre::{OptionExt, Result};
 
 use crate::{
+    app::{component::command::CommandPopup, display_focus::DisplayFocus, App},
     error::StrataError,
-    model::{
-        app::{state::DisplayFocus, App},
-        component::command::AppCommand,
-    },
 };
 
 pub(crate) fn handle_open(app: &mut App) -> Result<()> {
     match app.display_focus() {
         DisplayFocus::TableSelector => {
-            app.focus_command(AppCommand::new(
+            app.focus_command(CommandPopup::new(
                 "Open File",
                 "",
                 Box::new(|input, app| {

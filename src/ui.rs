@@ -2,15 +2,16 @@ mod render_exit;
 mod render_footer;
 
 use ratatui::{
-    layout::{Constraint, Layout, Rect},
+    layout::{Constraint, Layout},
     Frame,
 };
 use render_exit::render_exit;
 use render_footer::render_footer;
 
-use crate::model::{
-    app::{state::DisplayFocus, App},
-    component::StrataComponent,
+use crate::app::{
+    component::{StrataComponent, StrataPopup},
+    display_focus::DisplayFocus,
+    App,
 };
 
 pub fn ui(frame: &mut Frame, app: &mut App) {
@@ -40,25 +41,12 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
     // render overlay
     match app.display_focus() {
         DisplayFocus::Command(_) => {
-            let command_area = Rect {
-                x: frame.area().width / 4,
-                y: frame.area().height / 3,
-                width: frame.area().width / 2,
-                height: 3,
-            };
             if let Some(command) = app.command() {
-                command.render(frame, command_area, true);
+                command.render(frame);
             };
         }
         DisplayFocus::Error(_) => {
-            let error_area = Rect {
-                x: frame.area().width / 4,
-                y: frame.area().height / 3,
-                width: frame.area().width / 2,
-                height: app.error_popup().size() as u16 + 6,
-            };
-            // render_error(frame, error_area, app.get_error_message());
-            app.error_popup().render(frame, error_area, true);
+            app.error_popup().render(frame);
         }
         DisplayFocus::Exit(_) => {
             render_exit(frame);
