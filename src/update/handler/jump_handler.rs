@@ -1,17 +1,18 @@
-use eyre::{bail, Result};
+use std::mem;
+
+use eyre::{bail, OptionExt, Result};
 
 use crate::{
     error::StrataError,
-    model::app::{
-        state::{AppCommand, DisplayFocus},
-        App,
+    model::{
+        app::{state::DisplayFocus, App},
+        component::command::AppCommand,
     },
 };
 
-pub(crate) fn jump_handler(app: &mut App) -> Result<()> {
+pub(crate) fn handle_jump(app: &mut App) -> Result<()> {
     match app.get_display_focus() {
         DisplayFocus::TableView => {
-            app.clear_user_input();
             app.focus_command(gen_command());
             Ok(())
         }
@@ -25,10 +26,16 @@ pub(crate) fn jump_handler(app: &mut App) -> Result<()> {
 fn gen_command() -> AppCommand {
     AppCommand::new(
         "Jump",
-        Box::new(|app| {
-            let input = app.get_user_input().to_string();
-            app.jump_cell_selector(&input)?;
-            app.clear_user_input();
+        "",
+        Box::new(|input, app| {
+            let index_str = input.to_string();
+            let tv = app.get_selected_table_view_mut()?;
+            let (row, col) = index_str
+                .split_once(" ")
+                .map(|(row, col)| (row.parse::<usize>(), col.parse::<usize>()))
+                .ok_or_eyre(StrataError::StringParseError(index_str))?;
+
+            *tv = mem::take(tv).select_cell(row?, col?)?;
             app.focus_table_view()?;
             Ok(())
         }),

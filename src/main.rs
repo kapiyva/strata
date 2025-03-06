@@ -18,15 +18,19 @@ use strata::{
 };
 
 fn main() -> Result<()> {
+    // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(&mut stdout);
     let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
 
+    // run app
     let mut app = App::new();
     let _ = run_app(&mut terminal, &mut app);
 
+    // cleanup
     disable_raw_mode()?;
     execute!(
         terminal.backend_mut(),
@@ -39,7 +43,6 @@ fn main() -> Result<()> {
 }
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
-    terminal.clear()?;
     loop {
         if let Err(e) = terminal.draw(|f| ui(f, app)) {
             app.push_error_message(e.to_string());
@@ -115,17 +118,17 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
             Message::Move(MoveDirection::Left)
         }
         KeyCode::Char('j')
-            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableList =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector =>
         {
             Message::Move(MoveDirection::Down)
         }
         KeyCode::Char('k')
-            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableList =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector =>
         {
             Message::Move(MoveDirection::Up)
         }
         KeyCode::Char('l')
-            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableList =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector =>
         {
             Message::Move(MoveDirection::Right)
         }

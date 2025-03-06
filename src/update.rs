@@ -1,48 +1,54 @@
 mod handler;
 
+use std::mem;
+
 use crate::{error::StrataError, message::Message, model::app::App};
-use eyre::{bail, Result};
+use eyre::{bail, OptionExt, Result};
 use handler::{
-    add_handler::add_handler, cancel_handler::cancel_handler, delete_handler::delete_handler,
-    edit_handler::edit_handler, enter_handler::enter_handler,
-    hyper_edit_handler::hyper_edit_handler, jump_handler::jump_handler,
-    move_cursor_handler::move_cursor_handler, open_handler::open_handler,
+    add_handler::handle_add,
+    cancel_handler::handle_cancel,
+    delete_handler::handle_delete,
+    edit_handler::handle_edit,
+    enter_handler::handle_enter,
+    hyper_edit_handler::handle_hyper_edit,
+    jump_handler::handle_jump,
+    move_cursor_handler::handle_move_cursor,
+    open_handler::handle_open,
+    table_size_handler::{
+        handle_collapse_col, handle_collapse_row, handle_expand_col, handle_expand_row,
+    },
 };
 
 pub fn update(app: &mut App, message: Message) -> Result<()> {
     match message {
-        Message::Enter => enter_handler(app),
-        Message::Cancel => cancel_handler(app),
+        Message::Enter => handle_enter(app),
+        Message::Cancel => handle_cancel(app),
         Message::Exiting => Ok(app.focus_exit()),
-        Message::Move(direction) => move_cursor_handler(app, direction),
-        Message::Jump => jump_handler(app),
-        Message::Add => add_handler(app),
-        Message::Open => open_handler(app),
-        Message::Edit => edit_handler(app),
-        Message::HyperEdit => hyper_edit_handler(app),
+        Message::Move(direction) => handle_move_cursor(app, direction),
+        Message::Jump => handle_jump(app),
+        Message::Add => handle_add(app),
+        Message::Open => handle_open(app),
+        Message::Edit => handle_edit(app),
+        Message::HyperEdit => handle_hyper_edit(app),
         Message::Input(c) => {
-            app.push_user_input(c);
+            let command = app
+                .get_command_mut()
+                .ok_or_eyre(StrataError::CommandNotFound)?;
+            *command = mem::take(command).input(c);
             Ok(())
         }
         Message::BackSpace => {
-            app.pop_user_input();
+            let command = app
+                .get_command_mut()
+                .ok_or_eyre(StrataError::CommandNotFound)?;
+            *command = mem::take(command).pop_input();
             Ok(())
         }
-        Message::Delete => delete_handler(app),
-        Message::ExpandRow => app.expand_row(),
-        Message::CollapseRow => {
-            let Some((row, _)) = app.get_selected_cell() else {
-                bail!(StrataError::NoCellSelected);
-            };
-            app.collapse_row(row)
-        }
-        Message::ExpandColumn => app.expand_col(),
-        Message::CollapseColumn => {
-            let Some((_, col)) = app.get_selected_cell() else {
-                bail!(StrataError::NoCellSelected);
-            };
-            app.collapse_col(col)
-        }
+        Message::Delete => handle_delete(app),
+        Message::ExpandRow => handle_expand_row(app),
+        Message::CollapseRow => handle_collapse_row(app),
+        Message::ExpandColumn => handle_expand_col(app),
+        Message::CollapseColumn => handle_collapse_col(app),
         Message::NoOp => Ok(()),
         _ => bail!("Message handler not implemented"),
     }

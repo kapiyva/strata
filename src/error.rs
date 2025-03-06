@@ -5,6 +5,9 @@ pub enum StrataError {
     #[error("Invalid operation was called:  operation:[{operation:?}], focus:[{focus:?}]")]
     InvalidOperationCall { operation: String, focus: String },
 
+    #[error("Index out of bounds: max:[{max}], requested:[{requested}]")]
+    IndexOutOfBounds { max: usize, requested: usize },
+
     #[error("Table already exists: table_name:[{0}]")]
     TableNameDuplicate(String),
 
@@ -34,4 +37,7 @@ pub enum StrataError {
 
     #[error("String parse failed: {0}")]
     StringParseError(String),
+
+    #[error("Table Has No Header")]
+    TableHasNoHeader,
 }

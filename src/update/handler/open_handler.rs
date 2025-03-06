@@ -4,28 +4,26 @@ use eyre::{OptionExt, Result};
 
 use crate::{
     error::StrataError,
-    model::app::{
-        state::{AppCommand, DisplayFocus},
-        App,
+    model::{
+        app::{state::DisplayFocus, App},
+        component::command::AppCommand,
     },
 };
 
-pub(crate) fn open_handler(app: &mut App) -> Result<()> {
+pub(crate) fn handle_open(app: &mut App) -> Result<()> {
     match app.get_display_focus() {
-        DisplayFocus::TableList => {
-            app.clear_user_input();
+        DisplayFocus::TableSelector => {
             app.focus_command(AppCommand::new(
                 "Open File",
-                Box::new(|app| {
-                    let input = app.get_user_input().to_string();
-                    let path = Path::new(&input);
+                "",
+                Box::new(|input, app| {
+                    let path = Path::new(input);
                     let table_name = path
                         .file_stem()
                         .and_then(OsStr::to_str)
                         .ok_or_eyre(StrataError::InvalidTableName)?;
-                    app.open_table(&path)?;
+                    app.open_table(&path, true)?;
                     app.focus_table_view_by_name(&table_name)?;
-                    app.clear_user_input();
                     Ok(())
                 }),
             ));
@@ -37,10 +35,9 @@ pub(crate) fn open_handler(app: &mut App) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    // use crate::model::table::TableName;
-
     // use super::*;
 
+    // todo: Implement tests
     #[test]
-    fn test_open_handler() {}
+    fn test_handle_open() {}
 }

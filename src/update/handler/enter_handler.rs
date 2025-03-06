@@ -1,25 +1,33 @@
-use eyre::Result;
+use std::mem;
 
-use crate::model::app::{
-    state::{AppCommand, DisplayFocus},
-    App,
+use eyre::{OptionExt, Result};
+
+use crate::{
+    error::StrataError,
+    model::{
+        app::{state::DisplayFocus, App},
+        component::command::AppCommand,
+    },
 };
 
-pub(crate) fn enter_handler(app: &mut App) -> Result<()> {
+pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
     match app.get_display_focus() {
         DisplayFocus::Command(_) => {
             app.execute_command()?;
-            app.clear_user_input();
             Ok(())
         }
-        DisplayFocus::TableList => app.select_table(),
+        DisplayFocus::TableSelector => app.focus_table_view(),
         DisplayFocus::TableView => {
-            app.clear_user_input();
             app.focus_command(AppCommand::new(
                 "Edit Cell",
-                Box::new(|app| {
-                    let input = app.get_user_input().to_string();
-                    app.update_cell_value(&input)
+                "",
+                Box::new(|input, app| {
+                    let tv = app.get_selected_table_view_mut()?;
+                    let (row, col) = tv
+                        .get_selector_index()
+                        .ok_or_eyre(StrataError::NoCellSelected)?;
+                    *tv = mem::take(tv).update_cell(row, col, input)?;
+                    Ok(())
                 }),
             ));
             Ok(())

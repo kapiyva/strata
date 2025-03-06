@@ -1,14 +1,15 @@
+use std::mem;
+
 use eyre::Result;
 
-use crate::model::app::{
-    state::{AppCommand, DisplayFocus},
-    App,
+use crate::model::{
+    app::{state::DisplayFocus, App},
+    component::command::AppCommand,
 };
 
-pub(crate) fn hyper_edit_handler(app: &mut App) -> Result<()> {
+pub(crate) fn handle_hyper_edit(app: &mut App) -> Result<()> {
     match app.get_display_focus() {
         DisplayFocus::TableView => {
-            app.clear_user_input();
             app.focus_command(gen_command());
             Ok(())
         }
@@ -19,9 +20,14 @@ pub(crate) fn hyper_edit_handler(app: &mut App) -> Result<()> {
 fn gen_command() -> AppCommand {
     AppCommand::new(
         "Edit Table Header",
-        Box::new(|app| {
-            app.update_header(&app.get_user_input().to_string())?;
-            app.clear_user_input();
+        "",
+        Box::new(|input, app| {
+            let tv = app.get_selected_table_view_mut()?;
+            let (_, col) = tv
+                .get_selector_index()
+                .ok_or_else(|| eyre::eyre!("No column selected"))?;
+
+            *tv = mem::take(tv).update_header(col, input)?;
             Ok(())
         }),
     )

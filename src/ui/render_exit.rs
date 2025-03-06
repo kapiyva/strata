@@ -4,7 +4,7 @@ use ratatui::{
     Frame,
 };
 
-use super::component::popup::Popup;
+use crate::model::component::popup::Popup;
 
 pub(crate) fn render_exit(frame: &mut Frame) {
     let popup_area = Rect {
