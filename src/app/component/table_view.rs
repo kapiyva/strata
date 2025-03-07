@@ -60,6 +60,21 @@ impl TableView {
         })
     }
 
+    pub fn save_csv(&self, file_path: &Path) -> Result<()> {
+        let mut writer = csv::Writer::from_path(file_path)?;
+
+        if self.has_header {
+            writer.write_record(self.header.iter())?;
+        }
+
+        for row in self.rows.iter() {
+            writer.write_record(row.iter())?;
+        }
+
+        writer.flush()?;
+        Ok(())
+    }
+
     pub fn header(&self) -> &Vec<String> {
         &self.header
     }

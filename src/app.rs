@@ -84,7 +84,7 @@ impl App {
         &mut self.error_popup
     }
 
-    pub fn focus_table_list(&mut self) -> &mut Self {
+    pub fn focus_table_selector(&mut self) -> &mut Self {
         self.display_focus = DisplayFocus::TableSelector;
         self
     }
@@ -131,10 +131,10 @@ impl App {
     pub fn focus_last(&mut self) -> Result<&mut Self> {
         match &self.display_focus {
             DisplayFocus::TableSelector => Ok(self),
-            DisplayFocus::TableView => Ok(self.focus_table_list()),
+            DisplayFocus::TableView => Ok(self.focus_table_selector()),
             DisplayFocus::Command(_) | DisplayFocus::Error(_) | DisplayFocus::Exit(_) => {
                 match DisplayFocus::last_focus(&self.display_focus) {
-                    DisplayFocus::TableSelector => Ok(self.focus_table_list()),
+                    DisplayFocus::TableSelector => Ok(self.focus_table_selector()),
                     DisplayFocus::TableView => self.focus_table_view(),
                     _ => bail!(StrataError::InvalidOperationCall {
                         operation: "cancel".to_string(),

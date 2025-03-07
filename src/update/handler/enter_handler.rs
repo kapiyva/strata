@@ -25,6 +25,7 @@ pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
                         .selected_index()
                         .ok_or_eyre(StrataError::NoCellSelected)?;
                     tv.update_cell(row, col, input)?;
+                    app.focus_table_view()?;
                     Ok(())
                 }),
             ));

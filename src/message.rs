@@ -16,6 +16,7 @@ pub enum Message {
     CollapseRow,
     ExpandColumn,
     CollapseColumn,
+    Save,
     NoOp,
 }
 

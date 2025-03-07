@@ -6,7 +6,7 @@ use ratatui::{
 
 use crate::error::StrataError;
 
-use super::{border_style, selectable_item_style_factory, StrataComponent};
+use super::{component_style, selectable_item_style_factory, StrataComponent};
 
 pub const INITIAL_TABLE_NAME: &str = "new_table";
 
@@ -159,7 +159,7 @@ impl StrataComponent for TableSelector {
             .collect();
         let list = List::new(list_items)
             .block(Block::bordered().title("List"))
-            .style(border_style(is_focused))
+            .style(component_style(is_focused))
             .highlight_style(Style::new().italic())
             .highlight_symbol(">>")
             .repeat_highlight_symbol(true)

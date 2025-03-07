@@ -23,6 +23,7 @@ fn gen_command() -> CommandPopup {
                 .ok_or_else(|| eyre::eyre!("No column selected"))?;
 
             tv.update_header(col, input)?;
+            app.focus_last()?;
             Ok(())
         }),
     )

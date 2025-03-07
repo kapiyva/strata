@@ -12,6 +12,7 @@ use handler::{
     jump_handler::handle_jump,
     move_cursor_handler::handle_move_cursor,
     open_handler::handle_open,
+    save_handler::handle_save,
     table_size_handler::{
         handle_collapse_col, handle_collapse_row, handle_expand_col, handle_expand_row,
     },
@@ -29,6 +30,7 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
         Message::Jump => handle_jump(app),
         Message::Add => handle_add(app),
         Message::Open => handle_open(app),
+        Message::Save => handle_save(app),
         Message::Edit => handle_edit(app),
         Message::HyperEdit => handle_hyper_edit(app),
         Message::Input(c) => {

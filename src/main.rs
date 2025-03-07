@@ -89,6 +89,7 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
         KeyCode::Char('e') => Message::Edit,
         KeyCode::Char('E') => Message::HyperEdit,
         KeyCode::Char('o') => Message::Open,
+        KeyCode::Char('s') => Message::Save,
         KeyCode::Char('r') => match focus {
             DisplayFocus::TableView => Message::ExpandRow,
             _ => Message::NoOp,

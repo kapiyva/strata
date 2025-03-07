@@ -36,6 +36,7 @@ fn edit_table_name_command() -> CommandPopup {
 
             app.table_selector_mut()
                 .update_table(selected_index, table_name)?;
+            app.focus_table_selector();
             Ok(())
         }),
     )
