@@ -3,17 +3,17 @@ mod handler;
 use crate::{app::App, error::StrataError, message::Message};
 use eyre::{bail, OptionExt, Result};
 use handler::{
-    add_handler::handle_add,
-    cancel_handler::handle_cancel,
-    delete_handler::handle_delete,
-    edit_handler::handle_edit,
-    enter_handler::handle_enter,
-    hyper_edit_handler::handle_hyper_edit,
-    jump_handler::handle_jump,
-    move_cursor_handler::handle_move_cursor,
-    open_handler::handle_open,
-    save_handler::handle_save,
-    table_size_handler::{
+    handle_add::handle_add,
+    handle_cancel::handle_cancel,
+    handle_delete::handle_delete,
+    handle_edit::handle_edit,
+    handle_enter::handle_enter,
+    handle_hyper_edit::handle_hyper_edit,
+    handle_jump::handle_jump,
+    handle_move_cursor::handle_move_cursor,
+    handle_open::handle_open,
+    handle_save::handle_save,
+    handle_table_size::{
         handle_collapse_col, handle_collapse_row, handle_expand_col, handle_expand_row,
     },
 };
