@@ -14,7 +14,7 @@ use crate::app::{
     App,
 };
 
-pub fn ui(frame: &mut Frame, app: &mut App) {
+pub fn ui(frame: &mut Frame, app: &App) {
     // layout
     let [main_area, footer_area] =
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).areas(frame.area());

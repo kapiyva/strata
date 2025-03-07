@@ -207,8 +207,8 @@ mod tests {
         let mut table_view = TableView::default();
         table_view
             .expand_row()
-            .and_then(|tv| tv.expand_col("header1"))
-            .and_then(|tv| tv.update_cell(0, 0, "value0-0"))
+            .expand_col()
+            .update_cell(0, 0, "value0-0")
             .and_then(|tv| tv.update_cell(1, 0, "value1-0"))
             .and_then(|tv| tv.update_cell(0, 1, "value0-1"))
             .and_then(|tv| tv.update_cell(1, 1, "value1-1"))

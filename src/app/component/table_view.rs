@@ -9,7 +9,7 @@ use ratatui::{
 
 use crate::error::StrataError;
 
-use super::{border_style, selectable_item_style_factory, StrataComponent};
+use super::{component_style, selectable_item_style_factory, StrataComponent};
 
 pub const INITIAL_TABLE_SIZE: usize = 10;
 
@@ -156,10 +156,9 @@ impl TableView {
         Ok(self)
     }
 
-    pub fn expand_row(&mut self) -> Result<&mut Self> {
+    pub fn expand_row(&mut self) -> &mut Self {
         self.rows.push(vec!["".to_string(); self.header.len()]);
-
-        Ok(self)
+        self
     }
 
     pub fn collapse_row(&mut self, row: usize) -> Result<&mut Self> {
@@ -169,13 +168,12 @@ impl TableView {
         Ok(self)
     }
 
-    pub fn expand_col(&mut self, new_header: &str) -> Result<&mut Self> {
-        self.header.push(new_header.to_string());
+    pub fn expand_col(&mut self) -> &mut Self {
+        self.header.push(format!("header{}", self.header.len()));
         for row in self.rows.iter_mut() {
             row.push("".to_string());
         }
-
-        Ok(self)
+        self
     }
 
     pub fn collapse_col(&mut self, col: usize) -> Result<&mut Self> {
@@ -250,7 +248,7 @@ impl StrataComponent for TableView {
 
         let table = Table::new(body, self.header_widths())
             .block(Block::default().title("Table").borders(Borders::ALL))
-            .style(border_style(is_focused))
+            .style(component_style(is_focused))
             .header(header);
 
         frame.render_stateful_widget(table, area, &mut self.cell_selector.clone());
@@ -372,7 +370,7 @@ mod tests {
     #[test]
     fn test_expand_row() {
         let mut tv = TableView::new();
-        tv.expand_row().unwrap();
+        tv.expand_row();
 
         assert_eq!(tv.rows.len(), INITIAL_TABLE_SIZE + 1);
         assert_eq!(tv.rows[INITIAL_TABLE_SIZE].len(), INITIAL_TABLE_SIZE);
@@ -389,7 +387,7 @@ mod tests {
     #[test]
     fn test_expand_col() {
         let mut tv = TableView::new();
-        tv.expand_col("new_header").unwrap();
+        tv.expand_col();
 
         assert_eq!(tv.header.len(), INITIAL_TABLE_SIZE + 1);
         assert_eq!(tv.rows[0].len(), INITIAL_TABLE_SIZE + 1);

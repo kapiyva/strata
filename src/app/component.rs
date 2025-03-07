@@ -17,7 +17,7 @@ pub trait StrataPopup {
     fn render(&self, frame: &mut Frame);
 }
 
-pub fn border_style(is_focused: bool) -> Style {
+pub fn component_style(is_focused: bool) -> Style {
     if is_focused {
         Style::default().bold().fg(Color::LightYellow)
     } else {

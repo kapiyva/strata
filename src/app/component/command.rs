@@ -7,22 +7,22 @@ use ratatui::{
 
 use crate::app::{base_component::popup::Popup, App};
 
-use super::{border_style, StrataPopup};
+use super::{component_style, StrataPopup};
 
 type Command = Box<dyn FnOnce(&str, &mut App) -> Result<()>>;
 
 pub struct CommandPopup {
-    command_name: String,
+    title: String,
     input: String,
-    function: Command,
+    command: Command,
 }
 
 impl Default for CommandPopup {
     fn default() -> Self {
         Self {
-            command_name: String::new(),
+            title: String::new(),
             input: String::new(),
-            function: Box::new(|_, _| Ok(())),
+            command: Box::new(|_, _| Ok(())),
         }
     }
 }
@@ -30,18 +30,18 @@ impl Default for CommandPopup {
 impl CommandPopup {
     pub fn new(command_name: &str, input: &str, function: Command) -> CommandPopup {
         CommandPopup {
-            command_name: command_name.to_string(),
+            title: command_name.to_string(),
             input: input.to_string(),
-            function,
+            command: function,
         }
     }
 
     pub fn command_name(&self) -> &str {
-        &self.command_name
+        &self.title
     }
 
     pub fn execute(self, app: &mut App) -> Result<()> {
-        (self.function)(&self.input, app)
+        (self.command)(&self.input, app)
     }
 
     pub fn input(&mut self, c: char) -> &mut Self {
@@ -69,9 +69,9 @@ impl StrataPopup for CommandPopup {
             height: 3,
         };
         let popup = Popup {
-            title: self.command_name.clone().into(),
+            title: self.title.clone().into(),
             content: self.input.clone().into(),
-            style: border_style(true),
+            style: component_style(true),
             title_style: Style::new().white().bold(),
             border_style: Style::default(),
         };

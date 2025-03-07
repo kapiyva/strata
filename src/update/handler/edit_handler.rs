@@ -52,6 +52,7 @@ fn edit_cell_command() -> CommandPopup {
                 .ok_or_else(|| eyre::eyre!("No cell selected"))?;
 
             tv.update_cell(row, col, input)?;
+            app.focus_table_view()?;
             Ok(())
         }),
     )

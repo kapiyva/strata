@@ -38,7 +38,7 @@ impl DisplayFocus {
     pub fn get_guide(&self) -> String {
         match self {
             DisplayFocus::TableSelector => {
-                "<a> Add new table | <o> Open CSV file | <d> Delete table | <q> Quit app"
+                "<a> Add new | <o> Open CSV | <J> Jump | <d> Delete table | <q> Quit app"
                     .to_string()
             }
             DisplayFocus::TableView => {

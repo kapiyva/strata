@@ -48,7 +48,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
             app.error_popup_mut().push(e.to_string());
             app.focus_error();
         }
-        // handle key event
+
         if let Event::Key(key) = event::read()? {
             let message = handle_key_event(key, app.display_focus());
             if let Message::Exit = message {

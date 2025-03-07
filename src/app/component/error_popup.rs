@@ -6,7 +6,7 @@ use ratatui::{
 
 use crate::app::base_component::popup::Popup;
 
-use super::{border_style, StrataPopup};
+use super::{component_style, StrataPopup};
 
 #[derive(Default)]
 pub struct ErrorPopup {
@@ -52,7 +52,7 @@ impl StrataPopup for ErrorPopup {
         let popup = Popup {
             title: "Error".into(),
             content: self.error_message.join("\n").into(),
-            style: border_style(true),
+            style: component_style(true),
             title_style: Style::new().white().bold(),
             border_style: Style::default(),
         };
