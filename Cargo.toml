@@ -1,7 +1,11 @@
 [package]
 name = "strata"
 version = "0.1.0"
+authors = ["Kapiyva <ri9py1201@proton.me>"]
 edition = "2021"
+license = "GPL-3.0-or-later"
+description = "A TUI CSV editor written in Rust"
+repository = "https://github.com/kapiyva/strata"
 
 [dependencies]
 color-eyre = "0.6.3"
