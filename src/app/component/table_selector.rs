@@ -174,7 +174,7 @@ mod tests {
     use super::*;
 
     impl TableSelector {
-        pub fn get_table_list(&self) -> &Vec<TableName> {
+        pub fn table_list(&self) -> &Vec<TableName> {
             &self.table_list
         }
     }
@@ -225,11 +225,11 @@ mod tests {
         let mut sl = setup();
 
         sl.push_table(TableName::from("table3").unwrap()).unwrap();
-        assert_eq!(sl.get_table_list().len(), 3);
+        assert_eq!(sl.table_list().len(), 3);
         assert_eq!(sl.selected_index(), Some(2));
 
         sl.push_table(TableName::from("table4").unwrap()).unwrap();
-        assert_eq!(sl.get_table_list().len(), 4);
+        assert_eq!(sl.table_list().len(), 4);
         assert_eq!(sl.selected_index(), Some(3));
     }
 
@@ -239,11 +239,11 @@ mod tests {
         sl.selected = Some(1);
 
         let sl = sl.remove_table(1).unwrap();
-        assert_eq!(sl.get_table_list().len(), 1);
+        assert_eq!(sl.table_list().len(), 1);
         assert_eq!(sl.selected_index(), Some(0));
 
         let sl = sl.remove_table(0).unwrap();
-        assert_eq!(sl.get_table_list().len(), 0);
+        assert_eq!(sl.table_list().len(), 0);
         assert_eq!(sl.selected_index(), None);
     }
 }

@@ -22,30 +22,26 @@ pub(crate) fn handle_add(app: &mut App) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use crate::app::component::table_selector::TableName;
+    use crate::{
+        app::component::table_selector::TableName,
+        test_util::{input_to_command, setup_sample_app},
+    };
 
     use super::*;
 
-    fn input(app: &mut App, input: &str) {
-        let command = app.command_mut().unwrap();
-        for c in input.chars() {
-            command.input(c);
-        }
-    }
-
     #[test]
     fn test_add_handler() {
-        let mut app = App::new();
+        let mut app = setup_sample_app();
         // focus command
         handle_add(&mut app).unwrap();
         // input table name
         let table_name = "table1";
-        input(&mut app, table_name);
+        input_to_command(&mut app, table_name);
         // execute command
         app.execute_command().unwrap();
 
         assert_eq!(*app.display_focus(), DisplayFocus::TableView);
-        assert_eq!(app.table_selector().get_table_list().len(), 1);
+        assert_eq!(app.table_selector().table_list().len(), 1);
         assert_eq!(
             app.table_selector().selected_table_name(),
             Some(&TableName::from(table_name).unwrap())

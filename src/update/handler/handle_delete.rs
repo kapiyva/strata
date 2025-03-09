@@ -17,3 +17,32 @@ pub(crate) fn handle_delete(app: &mut App) -> Result<()> {
         _ => Ok(()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::test_util::setup_sample_app;
+
+    use super::*;
+
+    #[test]
+    fn test_delete_cell_command() {
+        let mut app = setup_sample_app();
+        app.focus_table_view().unwrap();
+
+        handle_delete(&mut app).unwrap();
+
+        assert_eq!(
+            app.selected_table_view().unwrap().cell_value(0, 0).unwrap(),
+            ""
+        );
+    }
+
+    #[test]
+    fn test_delete_table_command() {
+        let mut app = setup_sample_app();
+
+        handle_delete(&mut app).unwrap();
+
+        assert_eq!(app.table_selector().table_list().len(), 1);
+    }
+}

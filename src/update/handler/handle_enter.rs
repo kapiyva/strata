@@ -39,3 +39,25 @@ pub(crate) fn handle_enter(app: &mut App) -> Result<()> {
         _ => Ok(()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::test_util::{input_to_command, setup_sample_app};
+
+    use super::*;
+
+    #[test]
+    fn test_edit_cell_command() {
+        let mut app = setup_sample_app();
+        app.focus_table_view().unwrap();
+
+        handle_enter(&mut app).unwrap();
+        input_to_command(&mut app, "new cell value");
+        handle_enter(&mut app).unwrap();
+
+        assert_eq!(
+            app.selected_table_view().unwrap().cell_value(0, 0).unwrap(),
+            "new cell value"
+        );
+    }
+}

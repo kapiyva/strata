@@ -196,31 +196,9 @@ impl App {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_util::setup_sample_app;
+
     use super::*;
-
-    fn setup_focus_table_list_app() -> App {
-        let mut app = App::new();
-        // setup table name
-        let table_name_1 = TableName::from("table1").unwrap();
-        let table_name_2 = TableName::from("table2").unwrap();
-        // create 2x2 table
-        let mut table_view = TableView::default();
-        table_view
-            .expand_row()
-            .expand_col()
-            .update_cell(0, 0, "value0-0")
-            .and_then(|tv| tv.update_cell(1, 0, "value1-0"))
-            .and_then(|tv| tv.update_cell(0, 1, "value0-1"))
-            .and_then(|tv| tv.update_cell(1, 1, "value1-1"))
-            .unwrap();
-        // setup app state
-        app.display_focus = DisplayFocus::TableSelector;
-        app.table_selector = TableSelector::from(vec![table_name_1.clone(), table_name_2.clone()]);
-        app.table_view_list.push(table_view.clone());
-        app.table_view_list.push(table_view);
-
-        app
-    }
 
     #[test]
     fn test_add_table() {
@@ -229,33 +207,33 @@ mod tests {
         app.add_table("table1").unwrap();
         app.add_table("table2").unwrap();
 
-        assert_eq!(app.table_selector.get_table_list().len(), 2);
+        assert_eq!(app.table_selector.table_list().len(), 2);
         assert!(app
             .table_selector
-            .get_table_list()
+            .table_list()
             .contains(&&TableName::from("table1").unwrap()));
         assert!(app
             .table_selector
-            .get_table_list()
+            .table_list()
             .contains(&&TableName::from("table2").unwrap()));
         assert_eq!(app.table_view_list.len(), 2);
     }
 
     #[test]
     fn test_remove_table() {
-        let mut app = setup_focus_table_list_app();
+        let mut app = setup_sample_app();
 
         app.remove_table().unwrap();
-        assert_eq!(app.table_selector.get_table_list().len(), 1);
+        assert_eq!(app.table_selector.table_list().len(), 1);
         assert!(app
             .table_selector
-            .get_table_list()
+            .table_list()
             .contains(&&TableName::from("table2").unwrap()));
     }
 
     #[test]
     fn test_focus_table_view_by_name() {
-        let mut app = setup_focus_table_list_app();
+        let mut app = setup_sample_app();
 
         app.focus_table_view_by_name("table2").unwrap();
         assert_eq!(app.display_focus().to_string(), "TableView");
@@ -264,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_focus_command() {
-        let mut app = setup_focus_table_list_app();
+        let mut app = setup_sample_app();
         let command = CommandPopup::new("test", "", Box::new(|_, _| Ok(())));
         app.focus_command(command);
 
