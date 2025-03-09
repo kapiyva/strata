@@ -1,29 +1,24 @@
 use eyre::Result;
 
-use crate::app::{component::command::CommandPopup, display_focus::DisplayFocus, App};
+use crate::app::{component::command::CommandPopup, App};
 
-pub(crate) fn handle_add(app: &mut App) -> Result<()> {
-    match app.display_focus() {
-        DisplayFocus::TableSelector => {
-            app.focus_command(CommandPopup::new(
-                "Add Table",
-                "",
-                Box::new(|input, app| {
-                    app.add_table(input)?;
-                    app.focus_table_view_by_name(input)?;
-                    Ok(())
-                }),
-            ));
+pub(crate) fn handle_add_table(app: &mut App) -> Result<()> {
+    app.focus_command(CommandPopup::new(
+        "Add Table",
+        "",
+        Box::new(|input, app| {
+            app.add_table(input)?;
+            app.focus_table_view_by_name(input)?;
             Ok(())
-        }
-        _ => Ok(()),
-    }
+        }),
+    ));
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        app::component::table_selector::TableName,
+        app::{component::table_selector::TableName, display_focus::DisplayFocus},
         test_util::{input_to_command, setup_sample_app},
     };
 
@@ -33,7 +28,7 @@ mod tests {
     fn test_add_handler() {
         let mut app = setup_sample_app();
         // focus command
-        handle_add(&mut app).unwrap();
+        handle_add_table(&mut app).unwrap();
         // input table name
         let table_name = "table1";
         input_to_command(&mut app, table_name);

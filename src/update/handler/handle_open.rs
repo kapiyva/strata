@@ -32,9 +32,31 @@ pub(crate) fn handle_open(app: &mut App) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
 
-    // todo: Implement tests
+    use crate::{
+        app::component::table_selector::TableName,
+        test_util::{input_to_command, setup_sample_app},
+    };
+
     #[test]
-    fn test_handle_open() {}
+    fn test_handle_open() {
+        let mut app = setup_sample_app();
+
+        handle_open(&mut app).unwrap();
+        input_to_command(&mut app, "tests/data/fluits.csv");
+        app.execute_command().unwrap();
+
+        assert_eq!(*app.display_focus(), DisplayFocus::TableView);
+        assert_eq!(
+            *app.table_selector().selected_table_name().unwrap(),
+            TableName::from("fluits").unwrap()
+        );
+        let tv = app.selected_table_view().unwrap();
+        assert_eq!(*tv.header(), vec!["fluits", "price"]);
+        assert_eq!(tv.cell_value(0, 0).unwrap(), "apple");
+        assert_eq!(tv.cell_value(0, 1).unwrap(), "100");
+        assert_eq!(tv.cell_value(1, 0).unwrap(), "orange");
+        assert_eq!(tv.cell_value(2, 0).unwrap(), "grape");
+    }
 }

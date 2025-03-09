@@ -18,7 +18,7 @@ impl ErrorPopup {
         Self::default()
     }
 
-    pub fn get_error_message(&self) -> &Vec<String> {
+    pub fn error_message(&self) -> &Vec<String> {
         &self.error_message
     }
 

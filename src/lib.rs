@@ -1,8 +1,8 @@
 pub mod app;
 pub mod error;
 pub mod message;
-pub mod ui;
 pub mod update;
+pub mod view;
 
 #[cfg(test)]
 pub mod test_util {

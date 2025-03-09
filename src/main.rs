@@ -13,8 +13,8 @@ use ratatui::{
 use strata::{
     app::{display_focus::DisplayFocus, App},
     message::{Message, MoveDirection},
-    ui::ui,
     update::update,
+    view::view,
 };
 
 fn main() -> Result<()> {
@@ -44,7 +44,7 @@ fn main() -> Result<()> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> {
     loop {
-        if let Err(e) = terminal.draw(|f| ui(f, app)) {
+        if let Err(e) = terminal.draw(|f| view(f, app)) {
             app.error_popup_mut().push(e.to_string());
             app.focus_error();
         }
@@ -70,13 +70,14 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
         KeyCode::Char(c) if matches!(focus, DisplayFocus::Command(_)) => Message::Input(c),
         // special key
         KeyCode::Esc => Message::Cancel,
-        KeyCode::Enter => {
-            if let DisplayFocus::Exit(_) = focus {
-                return Message::Exit;
-            }
-            Message::Enter
-        }
-        KeyCode::Backspace => Message::BackSpace,
+        KeyCode::Enter => match focus {
+            DisplayFocus::Command(_) => Message::ExecuteCommand,
+            DisplayFocus::TableSelector => Message::SelectTable,
+            DisplayFocus::TableView => Message::EditCell,
+            DisplayFocus::Exit(_) => Message::Exit,
+            _ => Message::NoOp,
+        },
+        KeyCode::Backspace => Message::PopInput,
         // others
         KeyCode::Char('q') => {
             if let DisplayFocus::Exit(_) = focus {
@@ -84,12 +85,32 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
             }
             Message::Exiting
         }
-        KeyCode::Char('a') => Message::Add,
-        KeyCode::Char('d') => Message::Delete,
-        KeyCode::Char('e') => Message::Edit,
-        KeyCode::Char('E') => Message::HyperEdit,
-        KeyCode::Char('o') => Message::Open,
-        KeyCode::Char('s') => Message::Save,
+        KeyCode::Char('a') => match focus {
+            DisplayFocus::TableSelector => Message::AddTable,
+            _ => Message::NoOp,
+        },
+        KeyCode::Char('d') => match focus {
+            DisplayFocus::TableSelector => Message::RemoveTable,
+            DisplayFocus::TableView => Message::DeleteCell,
+            _ => Message::NoOp,
+        },
+        KeyCode::Char('e') => match focus {
+            DisplayFocus::TableSelector => Message::EditTableName,
+            DisplayFocus::TableView => Message::EditCell,
+            _ => Message::NoOp,
+        },
+        KeyCode::Char('E') => match focus {
+            DisplayFocus::TableView => Message::EditHeader,
+            _ => Message::NoOp,
+        },
+        KeyCode::Char('o') => match focus {
+            DisplayFocus::TableSelector => Message::Open,
+            _ => Message::NoOp,
+        },
+        KeyCode::Char('s') => match focus {
+            DisplayFocus::TableSelector | DisplayFocus::TableView => Message::Save,
+            _ => Message::NoOp,
+        },
         KeyCode::Char('r') => match focus {
             DisplayFocus::TableView => Message::ExpandRow,
             _ => Message::NoOp,
@@ -112,7 +133,11 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
         KeyCode::Right => Message::Move(MoveDirection::Right),
         KeyCode::Left => Message::Move(MoveDirection::Left),
         KeyCode::Tab if *focus == DisplayFocus::TableView => Message::Move(MoveDirection::Right),
-        KeyCode::Char('J') => Message::Jump,
+        KeyCode::Char('J') => match focus {
+            DisplayFocus::TableView => Message::JumpTable,
+            DisplayFocus::TableSelector => Message::JumpCell,
+            _ => Message::NoOp,
+        },
 
         // vim keybindings
         KeyCode::Char('h') if *focus == DisplayFocus::TableView => {
