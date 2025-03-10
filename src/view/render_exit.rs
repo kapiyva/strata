@@ -4,7 +4,7 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::base_component::popup::Popup;
+use crate::app::{base_component::popup::Popup, component::component_style};
 
 pub(crate) fn render_exit(frame: &mut Frame) {
     let popup_area = Rect {
@@ -16,7 +16,7 @@ pub(crate) fn render_exit(frame: &mut Frame) {
     let popup = Popup {
         title: "Exit".into(),
         content: "Close this App?".into(),
-        style: Style::default(),
+        style: component_style(true),
         title_style: Style::new().white().bold(),
         border_style: Style::default(),
     };
