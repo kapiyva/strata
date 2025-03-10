@@ -4,7 +4,7 @@ use eyre::Result;
 
 use crate::app::{component::command::CommandPopup, App};
 
-pub(crate) fn handle_save(app: &mut App) -> Result<()> {
+pub(crate) fn handle_save(app: &mut App) -> Result<&mut App> {
     app.focus_command(CommandPopup::new(
         "Save File Path",
         "",
@@ -15,5 +15,5 @@ pub(crate) fn handle_save(app: &mut App) -> Result<()> {
             Ok(())
         }),
     ));
-    Ok(())
+    Ok(app)
 }

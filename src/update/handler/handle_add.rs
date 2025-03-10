@@ -2,7 +2,7 @@ use eyre::Result;
 
 use crate::app::{component::command::CommandPopup, App};
 
-pub(crate) fn handle_add_table(app: &mut App) -> Result<()> {
+pub(crate) fn handle_add_table(app: &mut App) -> Result<&mut App> {
     app.focus_command(CommandPopup::new(
         "Add Table",
         "",
@@ -12,7 +12,7 @@ pub(crate) fn handle_add_table(app: &mut App) -> Result<()> {
             Ok(())
         }),
     ));
-    Ok(())
+    Ok(app)
 }
 
 #[cfg(test)]
@@ -30,13 +30,13 @@ mod tests {
         // focus command
         handle_add_table(&mut app).unwrap();
         // input table name
-        let table_name = "table1";
+        let table_name = "table3";
         input_to_command(&mut app, table_name);
         // execute command
         app.execute_command().unwrap();
 
         assert_eq!(*app.display_focus(), DisplayFocus::TableView);
-        assert_eq!(app.table_selector().table_list().len(), 1);
+        assert_eq!(app.table_selector().table_list().len(), 3);
         assert_eq!(
             app.table_selector().selected_table_name(),
             Some(&TableName::from(table_name).unwrap())

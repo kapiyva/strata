@@ -18,14 +18,14 @@ use handler::{
     },
 };
 
-pub fn update(app: &mut App, message: Message) -> Result<()> {
+pub fn update(app: &mut App, message: Message) -> Result<&mut App> {
     match message {
         Message::AddTable => handle_add_table(app),
         Message::PopInput => {
             app.command_mut()
                 .ok_or_eyre(StrataError::CommandNotFound)?
                 .pop();
-            Ok(())
+            Ok(app)
         }
         Message::Cancel => handle_cancel(app),
         Message::CollapseColumn => handle_collapse_col(app),
@@ -38,18 +38,12 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
                 .ok_or_else(|| eyre::eyre!("No cell selected"))?;
 
             tv.update_cell(row, col, "")?;
-            Ok(())
+            Ok(app)
         }
         Message::EditTableName => handle_edit_table_name(app),
         Message::EditCell => handle_edit_cell(app),
-        Message::ExecuteCommand => {
-            app.execute_command()?;
-            Ok(())
-        }
-        Message::Exiting => {
-            app.focus_exit();
-            Ok(())
-        }
+        Message::ExecuteCommand => app.execute_command(),
+        Message::Exiting => Ok(app.focus_exit()),
         Message::ExpandColumn => handle_expand_col(app),
         Message::ExpandRow => handle_expand_row(app),
         Message::EditHeader => handle_edit_header(app),
@@ -57,18 +51,15 @@ pub fn update(app: &mut App, message: Message) -> Result<()> {
             app.command_mut()
                 .ok_or_eyre(StrataError::CommandNotFound)?
                 .input(c);
-            Ok(())
+            Ok(app)
         }
         Message::JumpTable => handle_jump_table(app),
         Message::JumpCell => handle_jump_cell(app),
         Message::Move(direction) => handle_move_cursor(app, direction),
-        Message::NoOp => Ok(()),
+        Message::NoOp => Ok(app),
         Message::Open => handle_open(app),
         Message::Save => handle_save(app),
-        Message::SelectTable => {
-            app.focus_table_view()?;
-            Ok(())
-        }
+        Message::SelectTable => app.focus_table_view(),
         _ => bail!("Message handler not implemented"),
     }
 }

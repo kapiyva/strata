@@ -145,15 +145,15 @@ impl App {
         }
     }
 
-    pub fn add_table(&mut self, table_name_str: &str) -> Result<()> {
+    pub fn add_table(&mut self, table_name_str: &str) -> Result<&mut Self> {
         let table_name = TableName::from(table_name_str)?;
 
         self.table_selector.push_table(table_name)?;
         self.table_view_list.push(TableView::new());
-        Ok(())
+        Ok(self)
     }
 
-    pub fn open_table(&mut self, file_path: &Path, has_header: bool) -> Result<()> {
+    pub fn open_table(&mut self, file_path: &Path, has_header: bool) -> Result<&mut Self> {
         let table_name = file_path
             .file_stem()
             .and_then(OsStr::to_str)
@@ -162,10 +162,10 @@ impl App {
 
         self.table_selector.push_table(table_name)?;
         self.table_view_list.push(new_table);
-        Ok(())
+        Ok(self)
     }
 
-    pub fn remove_table(&mut self) -> Result<()> {
+    pub fn remove_table(&mut self) -> Result<&mut Self> {
         if self.table_selector.is_empty() || self.table_view_list.is_empty() {
             bail!(StrataError::NoTableAdded);
         }
@@ -178,19 +178,21 @@ impl App {
         self.table_selector.remove_table(index)?;
         self.table_view_list.remove(index);
         self.display_focus = DisplayFocus::TableSelector;
-        Ok(())
+        Ok(self)
     }
 
     /// Execute the command and discard it
-    pub fn execute_command(&mut self) -> Result<()> {
+    pub fn execute_command(&mut self) -> Result<&mut Self> {
         self.command
             .take()
             .ok_or_eyre(StrataError::CommandNotFound)?
-            .execute(self)
+            .execute(self)?;
+        Ok(self)
     }
 
-    pub fn clear_command(&mut self) {
+    pub fn clear_command(&mut self) -> &mut Self {
         self.command = None;
+        self
     }
 }
 

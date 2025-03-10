@@ -8,7 +8,7 @@ use crate::{
     error::StrataError,
 };
 
-pub(crate) fn handle_edit_table_name(app: &mut App) -> Result<()> {
+pub(crate) fn handle_edit_table_name(app: &mut App) -> Result<&mut App> {
     app.focus_command(CommandPopup::new(
         "Edit Table Name",
         "",
@@ -25,7 +25,7 @@ pub(crate) fn handle_edit_table_name(app: &mut App) -> Result<()> {
             Ok(())
         }),
     ));
-    Ok(())
+    Ok(app)
 }
 
 #[cfg(test)]

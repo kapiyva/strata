@@ -7,7 +7,7 @@ use crate::{
     error::StrataError,
 };
 
-pub(crate) fn handle_open(app: &mut App) -> Result<()> {
+pub(crate) fn handle_open(app: &mut App) -> Result<&mut App> {
     match app.display_focus() {
         DisplayFocus::TableSelector => {
             app.focus_command(CommandPopup::new(
@@ -24,9 +24,9 @@ pub(crate) fn handle_open(app: &mut App) -> Result<()> {
                     Ok(())
                 }),
             ));
-            Ok(())
+            Ok(app)
         }
-        _ => Ok(()),
+        _ => Ok(app),
     }
 }
 
@@ -53,7 +53,7 @@ mod tests {
             TableName::from("fluits").unwrap()
         );
         let tv = app.selected_table_view().unwrap();
-        assert_eq!(*tv.header(), vec!["fluits", "price"]);
+        assert_eq!(*tv.headers(), vec!["fluits", "price"]);
         assert_eq!(tv.cell_value(0, 0).unwrap(), "apple");
         assert_eq!(tv.cell_value(0, 1).unwrap(), "100");
         assert_eq!(tv.cell_value(1, 0).unwrap(), "orange");

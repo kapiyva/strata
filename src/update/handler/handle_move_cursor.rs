@@ -5,22 +5,22 @@ use crate::{
     message::MoveDirection,
 };
 
-pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Result<()> {
+pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Result<&mut App> {
     match app.display_focus() {
         DisplayFocus::TableSelector => match direction {
             MoveDirection::Up => {
                 app.table_selector_mut().select_prev();
-                Ok(())
+                Ok(app)
             }
             MoveDirection::Down => {
                 app.table_selector_mut().select_next();
-                Ok(())
+                Ok(app)
             }
             MoveDirection::Right => {
                 app.focus_table_view()?;
-                Ok(())
+                Ok(app)
             }
-            _ => Ok(()),
+            _ => Ok(app),
         },
         DisplayFocus::TableView => {
             let tv = app.selected_table_view_mut()?;
@@ -31,8 +31,8 @@ pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Res
                 MoveDirection::Left => tv.move_selector(0, -1)?,
                 MoveDirection::Right => tv.move_selector(0, 1)?,
             };
-            Ok(())
+            Ok(app)
         }
-        _ => Ok(()),
+        _ => Ok(app),
     }
 }

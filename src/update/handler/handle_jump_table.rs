@@ -5,7 +5,7 @@ use crate::app::{
     App,
 };
 
-pub(crate) fn handle_jump_table(app: &mut App) -> Result<()> {
+pub(crate) fn handle_jump_table(app: &mut App) -> Result<&mut App> {
     app.focus_command(CommandPopup::new(
         "Jump [input table name e.g. table1]",
         "",
@@ -16,7 +16,7 @@ pub(crate) fn handle_jump_table(app: &mut App) -> Result<()> {
             Ok(())
         }),
     ));
-    Ok(())
+    Ok(app)
 }
 
 #[cfg(test)]
@@ -34,6 +34,7 @@ mod tests {
 
         handle_jump_table(&mut app).unwrap();
         input_to_command(&mut app, "table2");
+        app.execute_command().unwrap();
 
         assert_eq!(
             *app.table_selector().selected_table_name().unwrap(),

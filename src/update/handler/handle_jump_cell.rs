@@ -5,7 +5,7 @@ use crate::{
     error::StrataError,
 };
 
-pub(crate) fn handle_jump_cell(app: &mut App) -> Result<()> {
+pub(crate) fn handle_jump_cell(app: &mut App) -> Result<&mut App> {
     app.focus_command(CommandPopup::new(
         "Jump [input row and col index e.g. 1 2]",
         "",
@@ -21,7 +21,7 @@ pub(crate) fn handle_jump_cell(app: &mut App) -> Result<()> {
             Ok(())
         }),
     ));
-    Ok(())
+    Ok(app)
 }
 
 #[cfg(test)]
@@ -82,15 +82,17 @@ mod tests {
         handle_jump_cell(&mut app).unwrap();
         input_to_command(&mut app, "11 0");
 
-        let err = app.execute_command();
+        let Err(err) = app.execute_command() else {
+            panic!("Expected an error");
+        };
 
         assert_eq!(
-            err.map_err(|e| e.to_string()),
-            Err(StrataError::InvalidRowIndex {
+            err.to_string(),
+            StrataError::InvalidRowIndex {
                 max: 10,
                 requested: 11
             }
-            .to_string())
+            .to_string()
         );
 
         // invalid column index
@@ -98,15 +100,17 @@ mod tests {
         handle_jump_cell(&mut app).unwrap();
         input_to_command(&mut app, "0 11");
 
-        let err = app.execute_command();
+        let Err(err) = app.execute_command() else {
+            panic!("Expected an error");
+        };
 
         assert_eq!(
-            err.map_err(|e| e.to_string()),
-            Err(StrataError::InvalidColumnIndex {
+            err.to_string(),
+            StrataError::InvalidColumnIndex {
                 max: 10,
                 requested: 11
             }
-            .to_string())
+            .to_string()
         );
     }
 }
