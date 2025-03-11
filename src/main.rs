@@ -79,14 +79,17 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
         },
         KeyCode::Backspace => Message::PopInput,
         // others
-        KeyCode::Char('q') => {
-            if let DisplayFocus::Exit(_) = focus {
+        KeyCode::Char('q') => match focus {
+            DisplayFocus::Exit(_) => {
                 return Message::Exit;
             }
-            Message::Exiting
-        }
+            DisplayFocus::TableSelector => Message::Exiting,
+            DisplayFocus::TableView => Message::Cancel,
+            _ => Message::NoOp,
+        },
         KeyCode::Char('a') => match focus {
             DisplayFocus::TableSelector => Message::AddTable,
+            DisplayFocus::TableView => Message::EditCell,
             _ => Message::NoOp,
         },
         KeyCode::Char('d') => match focus {
