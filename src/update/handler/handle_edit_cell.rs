@@ -37,6 +37,7 @@ mod tests {
         app.focus_table_view().unwrap();
 
         handle_edit_cell(&mut app).unwrap();
+        app.command_mut().unwrap().clear();
         input_to_command(&mut app, "new cell value");
         app.execute_command().unwrap();
 
