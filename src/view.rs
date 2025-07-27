@@ -29,13 +29,23 @@ pub fn view(frame: &mut Frame, app: &App) {
         table_selector_area,
         *app.display_focus() == DisplayFocus::TableSelector,
     );
-    if let Ok(tv) = app.selected_table_view() {
-        tv.render(
-            frame,
-            table_area,
-            app.display_focus() == &DisplayFocus::TableView,
-        );
-    };
+    
+    match app.display_focus() {
+        DisplayFocus::FileView => {
+            if let Some(file_view) = app.file_view() {
+                file_view.render(frame, table_area, true);
+            }
+        }
+        _ => {
+            if let Ok(tv) = app.selected_table_view() {
+                tv.render(
+                    frame,
+                    table_area,
+                    app.display_focus() == &DisplayFocus::TableView,
+                );
+            }
+        }
+    }
     render_footer(frame, footer_area, app.display_focus());
 
     // render overlay

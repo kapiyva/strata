@@ -33,6 +33,17 @@ pub(crate) fn handle_move_cursor(app: &mut App, direction: MoveDirection) -> Res
             };
             Ok(app)
         }
+        DisplayFocus::FileView => {
+            if let Some(file_view) = app.file_view_mut() {
+                match direction {
+                    MoveDirection::Up => file_view.select_prev(),
+                    MoveDirection::Down => file_view.select_next(),
+                    MoveDirection::Left => { file_view.go_up_directory()?; }
+                    MoveDirection::Right => { file_view.expand_directory()?; }
+                }
+            }
+            Ok(app)
+        }
         _ => Ok(app),
     }
 }

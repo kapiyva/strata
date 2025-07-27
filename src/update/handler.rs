@@ -1,5 +1,6 @@
 pub mod handle_add;
 pub mod handle_cancel;
+pub mod handle_change_table_size;
 pub mod handle_edit_cell;
 pub mod handle_edit_header;
 pub mod handle_edit_table_name;
@@ -8,4 +9,3 @@ pub mod handle_jump_table;
 pub mod handle_move_cursor;
 pub mod handle_open;
 pub mod handle_save;
-pub mod handle_table_size;

@@ -20,7 +20,9 @@ pub enum Message {
     Move(MoveDirection),
     NoOp,
     Open,
+    OpenFileView,
     Save,
+    SelectFile,
     SelectTable,
 }
 

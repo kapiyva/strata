@@ -2,6 +2,7 @@
 pub enum DisplayFocus {
     TableSelector,
     TableView,
+    FileView,
     Command(Box<DisplayFocus>),
     Error(Box<DisplayFocus>),
     Exit(Box<DisplayFocus>),
@@ -18,6 +19,7 @@ impl ToString for DisplayFocus {
         match self {
             DisplayFocus::TableSelector => "TableList".to_string(),
             DisplayFocus::TableView => "TableView".to_string(),
+            DisplayFocus::FileView => "FileView".to_string(),
             DisplayFocus::Command(_) => "Command".to_string(),
             DisplayFocus::Error(_) => "Error".to_string(),
             DisplayFocus::Exit(_) => "Exit".to_string(),
@@ -38,11 +40,15 @@ impl DisplayFocus {
     pub fn get_guide(&self) -> String {
         match self {
             DisplayFocus::TableSelector => {
-                "<a> Add new | <o> Open CSV | <J> Jump | <d> Delete table | <q> Quit app"
+                "<a> Add new | <o> Open file browser | <J> Jump | <d> Delete table | <q> Quit app"
                     .to_string()
             }
             DisplayFocus::TableView => {
                 "<r> Add new row | <e> Edit cell | <E> Edit header | <d> Delete cell | <J> Jump"
+                    .to_string()
+            }
+            DisplayFocus::FileView => {
+                "<Enter> Open file | <h/j/k/l> Navigate | <..> Go up | <q> Back"
                     .to_string()
             }
             DisplayFocus::Command(_) => "<Enter> Submit | <Esc> Cancel".to_string(),

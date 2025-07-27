@@ -74,6 +74,7 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
             DisplayFocus::Command(_) => Message::ExecuteCommand,
             DisplayFocus::TableSelector => Message::SelectTable,
             DisplayFocus::TableView => Message::EditCell,
+            DisplayFocus::FileView => Message::SelectFile,
             DisplayFocus::Exit(_) => Message::Exit,
             _ => Message::NoOp,
         },
@@ -85,6 +86,7 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
             }
             DisplayFocus::TableSelector => Message::Exiting,
             DisplayFocus::TableView => Message::Cancel,
+            DisplayFocus::FileView => Message::Cancel,
             _ => Message::NoOp,
         },
         KeyCode::Char('a') => match focus {
@@ -107,7 +109,7 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
             _ => Message::NoOp,
         },
         KeyCode::Char('o') => match focus {
-            DisplayFocus::TableSelector => Message::Open,
+            DisplayFocus::TableSelector => Message::OpenFileView,
             _ => Message::NoOp,
         },
         KeyCode::Char('s') => match focus {
@@ -147,19 +149,24 @@ fn handle_key_event(key: KeyEvent, focus: &DisplayFocus) -> Message {
             Message::Move(MoveDirection::Left)
         }
         KeyCode::Char('j')
-            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector || *focus == DisplayFocus::FileView =>
         {
             Message::Move(MoveDirection::Down)
         }
         KeyCode::Char('k')
-            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector || *focus == DisplayFocus::FileView =>
         {
             Message::Move(MoveDirection::Up)
         }
         KeyCode::Char('l')
-            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector =>
+            if *focus == DisplayFocus::TableView || *focus == DisplayFocus::TableSelector || *focus == DisplayFocus::FileView =>
         {
             Message::Move(MoveDirection::Right)
+        }
+        KeyCode::Char('h')
+            if *focus == DisplayFocus::FileView =>
+        {
+            Message::Move(MoveDirection::Left)
         }
         _ => Message::NoOp,
     }

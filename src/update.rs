@@ -5,6 +5,9 @@ use eyre::{bail, OptionExt, Result};
 use handler::{
     handle_add::handle_add_table,
     handle_cancel::handle_cancel,
+    handle_change_table_size::{
+        handle_collapse_col, handle_collapse_row, handle_expand_col, handle_expand_row,
+    },
     handle_edit_cell::handle_edit_cell,
     handle_edit_header::handle_edit_header,
     handle_edit_table_name::handle_edit_table_name,
@@ -13,9 +16,6 @@ use handler::{
     handle_move_cursor::handle_move_cursor,
     handle_open::handle_open,
     handle_save::handle_save,
-    handle_table_size::{
-        handle_collapse_col, handle_collapse_row, handle_expand_col, handle_expand_row,
-    },
 };
 
 pub fn update(app: &mut App, message: Message) -> Result<&mut App> {
@@ -58,7 +58,24 @@ pub fn update(app: &mut App, message: Message) -> Result<&mut App> {
         Message::Move(direction) => handle_move_cursor(app, direction),
         Message::NoOp => Ok(app),
         Message::Open => handle_open(app),
+        Message::OpenFileView => app.focus_file_view(),
         Message::Save => handle_save(app),
+        Message::SelectFile => {
+            if let Some(file_view) = app.file_view_mut() {
+                if let Some(selected_path) = file_view.selected_path() {
+                    if selected_path.is_file() {
+                        app.open_table(&selected_path, true)?;
+                        let table_name = selected_path.file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or("table");
+                        app.focus_table_view_by_name(table_name)?;
+                    } else if selected_path.is_dir() {
+                        file_view.expand_directory()?;
+                    }
+                }
+            }
+            Ok(app)
+        }
         Message::SelectTable => app.focus_table_view(),
         _ => bail!("Message handler not implemented"),
     }

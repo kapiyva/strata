@@ -1,5 +1,6 @@
 pub mod command;
 pub mod error_popup;
+pub mod file_view;
 pub mod table_selector;
 pub mod table_view;
 

@@ -13,6 +13,7 @@ use crate::error::StrataError;
 use component::{
     command::CommandPopup,
     error_popup::ErrorPopup,
+    file_view::FileView,
     table_selector::{TableName, TableSelector, INITIAL_TABLE_NAME},
     table_view::TableView,
 };
@@ -22,6 +23,7 @@ pub struct App {
     display_focus: DisplayFocus,
     table_selector: TableSelector,
     table_view_list: Vec<TableView>,
+    file_view: Option<FileView>,
     command: Option<CommandPopup>,
     error_popup: ErrorPopup,
 }
@@ -84,6 +86,14 @@ impl App {
         &mut self.error_popup
     }
 
+    pub fn file_view(&self) -> Option<&FileView> {
+        self.file_view.as_ref()
+    }
+
+    pub fn file_view_mut(&mut self) -> Option<&mut FileView> {
+        self.file_view.as_mut()
+    }
+
     pub fn focus_table_selector(&mut self) -> &mut Self {
         self.display_focus = DisplayFocus::TableSelector;
         self
@@ -110,6 +120,14 @@ impl App {
         Ok(self)
     }
 
+    pub fn focus_file_view(&mut self) -> Result<&mut Self> {
+        if self.file_view.is_none() {
+            self.file_view = Some(FileView::new()?);
+        }
+        self.display_focus = DisplayFocus::FileView;
+        Ok(self)
+    }
+
     pub fn focus_command(&mut self, command: CommandPopup) -> &mut Self {
         self.command = Some(command);
         self.display_focus = DisplayFocus::Command(Box::new(self.display_focus.clone()));
@@ -132,10 +150,12 @@ impl App {
         match &self.display_focus {
             DisplayFocus::TableSelector => Ok(self),
             DisplayFocus::TableView => Ok(self.focus_table_selector()),
+            DisplayFocus::FileView => Ok(self.focus_table_selector()),
             DisplayFocus::Command(_) | DisplayFocus::Error(_) | DisplayFocus::Exit(_) => {
                 match DisplayFocus::last_focus(&self.display_focus) {
                     DisplayFocus::TableSelector => Ok(self.focus_table_selector()),
                     DisplayFocus::TableView => self.focus_table_view(),
+                    DisplayFocus::FileView => self.focus_file_view(),
                     _ => bail!(StrataError::InvalidOperationCall {
                         operation: "cancel".to_string(),
                         focus: self.display_focus.to_string(),

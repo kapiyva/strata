@@ -2,17 +2,35 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum StrataError {
-    #[error("Invalid operation was called:  operation:[{operation:?}], focus:[{focus:?}]")]
-    InvalidOperationCall { operation: String, focus: String },
+    #[error("Command not found")]
+    CommandNotFound,
+
+    #[error("Failed to get file name for path: {0}")]
+    FailedToReadDir(String),
 
     #[error("Index out of bounds: max:[{max}], requested:[{requested}]")]
     IndexOutOfBounds { max: usize, requested: usize },
 
-    #[error("Table already exists: table_name:[{0}]")]
-    TableNameDuplicate(String),
+    #[error("Invalid column index: max:[{max}], requested:[{requested}]")]
+    InvalidColumnIndex { max: usize, requested: usize },
 
-    #[error("Table not found: table_name:[{0}]")]
-    TableNotFound(String),
+    #[error("Invalid operation was called:  operation:[{operation:?}], focus:[{focus:?}]")]
+    InvalidOperationCall { operation: String, focus: String },
+
+    #[error("Invalid row index: max:[{max}], requested:[{requested}]")]
+    InvalidRowIndex { max: usize, requested: usize },
+
+    #[error("Invalid table name")]
+    InvalidTableName,
+
+    #[error("Item not found: item_name:[{0}]")]
+    ItemNotFound(String),
+
+    #[error("No cell selected")]
+    NoCellSelected,
+
+    #[error("No item selected")]
+    NoItemSelected,
 
     #[error("No table added")]
     NoTableAdded,
@@ -20,24 +38,15 @@ pub enum StrataError {
     #[error("No table selected")]
     NoTableSelected,
 
-    #[error("Invalid table name")]
-    InvalidTableName,
-
-    #[error("Invalid row index: max:[{max}], requested:[{requested}]")]
-    InvalidRowIndex { max: usize, requested: usize },
-
-    #[error("Invalid column index: max:[{max}], requested:[{requested}]")]
-    InvalidColumnIndex { max: usize, requested: usize },
-
-    #[error("No cell selected")]
-    NoCellSelected,
-
-    #[error("Command not found")]
-    CommandNotFound,
-
     #[error("String parse failed: {0}")]
     StringParseError(String),
 
     #[error("Table Has No Header")]
     TableHasNoHeader,
+
+    #[error("Table already exists: table_name:[{0}]")]
+    TableNameDuplicate(String),
+
+    #[error("Table not found: table_name:[{0}]")]
+    TableNotFound(String),
 }

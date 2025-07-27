@@ -12,7 +12,7 @@ pub(crate) fn handle_cancel(app: &mut App) -> Result<&mut App> {
             app.error_popup_mut().clear();
             app.focus_last()
         }
-        DisplayFocus::TableSelector | DisplayFocus::TableView | DisplayFocus::Exit(_) => {
+        DisplayFocus::TableSelector | DisplayFocus::TableView | DisplayFocus::FileView | DisplayFocus::Exit(_) => {
             app.focus_last()
         }
     }
